@@ -11,17 +11,17 @@ async function simulateDEX() {
         const TOTAL_USERS = NUM_LPS + NUM_TRADERS;
 
         // --- !! IMPORTANT: Replace with YOUR deployed contract addresses !! ---
-        const TOKEN_A_ADDRESS = "0xYOUR_TOKEN_A_ADDRESS"; // <<< REPLACE
-        const TOKEN_B_ADDRESS = "0xYOUR_TOKEN_B_ADDRESS"; // <<< REPLACE
-        const LP_TOKEN_ADDRESS = "0xYOUR_LP_TOKEN_ADDRESS"; // <<< REPLACE (Address of LPToken contract)
-        const DEX_ADDRESS = "0xYOUR_DEX_ADDRESS";       // <<< REPLACE
+        const TOKEN_A_ADDRESS = "0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d"; // <<< REPLACE
+        const TOKEN_B_ADDRESS = "0x0fC5025C764cE34df352757e82f7B5c4Df39A836"; // <<< REPLACE
+        const LP_TOKEN_ADDRESS = "0xb27A31f1b0AF2946B7F582768f03239b1eC07c2c"; // <<< REPLACE (Address of LPToken contract)
+        const DEX_ADDRESS = "0xcD6a42782d230D7c13A74ddec5dD140e55499Df9";       // <<< REPLACE
 
         // --- Get ABIs (Application Binary Interfaces) ---
         // Adjust paths based on where Remix stores artifacts
         console.log("Fetching ABIs...");
-        const tokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/Token.sol/MyToken.json')); // Assuming Token.sol -> MyToken contract
-        const lpTokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/LPToken.sol/LPToken.json'));
-        const dexABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/DEX.sol/DEX.json'));
+        const tokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/MyToken.json')); // Assuming Token.sol -> MyToken contract
+        const lpTokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/LPToken.json'));
+        const dexABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/DEX.json'));
 
         const tokenABI = tokenABIMeta.abi;
         const lpTokenABI = lpTokenABIMeta.abi;
@@ -44,6 +44,47 @@ async function simulateDEX() {
         const lpToken = new web3.eth.Contract(lpTokenABI, LP_TOKEN_ADDRESS);
         const dex = new web3.eth.Contract(dexABI, DEX_ADDRESS);
         console.log("DEX contract instantiated at:", dex.options.address);
+
+        // --- Distribute Initial Tokens --- // <<< ADD THIS SECTION >>>
+        console.log("Distributing initial Token A and Token B to users...");
+        const usersToFund = users; // users array was accounts.slice(1, TOTAL_USERS + 1)
+
+        // Define amounts to distribute (adjust as needed)
+        // Ensure deployer has enough! Check initialSupply_ during Token A/B deployment.
+        const initialDistA = web3.utils.toWei('100', 'ether'); // e.g., 100 Token A per user
+        const initialDistB = web3.utils.toWei('200', 'ether'); // e.g., 200 Token B per user
+
+        for (const user of usersToFund) {
+            try {
+                console.log(`Distributing to user ${user.substring(0, 8)}...`);
+
+                // Distribute Token A
+                const balanceA = await tokenA.methods.balanceOf(user).call();
+                if(web3.utils.toBN(balanceA).isZero()){ // Optional: only distribute if they have none
+                    await tokenA.methods.transfer(user, initialDistA).send({ from: deployer, gas: 100000 });
+                    console.log(` -> Sent ${web3.utils.fromWei(initialDistA)} Token A`);
+                } else {
+                    console.log(` -> Already has Token A`);
+                }
+                await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+
+                // Distribute Token B
+                const balanceB = await tokenB.methods.balanceOf(user).call();
+                if(web3.utils.toBN(balanceB).isZero()){ // Optional: only distribute if they have none
+                    await tokenB.methods.transfer(user, initialDistB).send({ from: deployer, gas: 100000 });
+                    console.log(` -> Sent ${web3.utils.fromWei(initialDistB)} Token B`);
+                } else {
+                    console.log(` -> Already has Token B`);
+                }
+                await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+
+            } catch (e) {
+                console.warn(`Initial distribution failed for ${user}: ${e.message}. Ensure deployer has enough balance.`);
+                // Decide if you want to stop or continue if one transfer fails
+            }
+        }
+        console.log("Initial token distribution complete.");
+        // --- End of ADDED SECTION ---
 
         // --- Initial Setup ---
         // 1. Approvals: Users need to approve the DEX to spend their tokens
