@@ -11,10 +11,10 @@ async function simulateDEX() {
         const TOTAL_USERS = NUM_LPS + NUM_TRADERS;
 
         // --- !! IMPORTANT: Replace with YOUR deployed contract addresses !! ---
-        const TOKEN_A_ADDRESS = "0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d"; // <<< REPLACE
-        const TOKEN_B_ADDRESS = "0x0fC5025C764cE34df352757e82f7B5c4Df39A836"; // <<< REPLACE
-        const LP_TOKEN_ADDRESS = "0xb27A31f1b0AF2946B7F582768f03239b1eC07c2c"; // <<< REPLACE (Address of LPToken contract)
-        const DEX_ADDRESS = "0xcD6a42782d230D7c13A74ddec5dD140e55499Df9";       // <<< REPLACE
+        const TOKEN_A_ADDRESS = "0x5FD6eB55D12E759a21C09eF703fe0CBa1DC9d88D"; // <<< REPLACE
+        const TOKEN_B_ADDRESS = "0x7b96aF9Bd211cBf6BA5b0dd53aa61Dc5806b6AcE"; // <<< REPLACE
+        const LP_TOKEN_ADDRESS = "0x3328358128832A260C76A4141e19E2A943CD4B6D"; // <<< REPLACE (Address of LPToken contract)
+        const DEX_ADDRESS = "0x5e17b14ADd6c386305A32928F985b29bbA34Eff5";       // <<< REPLACE
 
         // --- Get ABIs (Application Binary Interfaces) ---
         // Adjust paths based on where Remix stores artifacts
