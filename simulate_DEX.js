@@ -95,9 +95,9 @@ async function simulateDEX() {
             // Ensure users[0] has enough tokens (distribution step should handle this)
             const balA_init = await tokenA.methods.balanceOf(users[0]).call();
             const balB_init = await tokenB.methods.balanceOf(users[0]).call();
-             if (web3.utils.toBN(balA_init).lt(web3.utils.toBN(initialAmountA)) || web3.utils.toBN(balB_init).lt(web3.utils.toBN(initialAmountB))) {
-                 console.warn(`User ${users[0]} might not have enough A/B for initial liquidity despite distribution attempt.`);
-             }
+            if (web3.utils.toBN(balA_init).lt(web3.utils.toBN(initialAmountA)) || web3.utils.toBN(balB_init).lt(web3.utils.toBN(initialAmountB))) {
+                console.warn(`User ${users[0]} might not have enough A/B for initial liquidity despite distribution attempt.`);
+            }
 
             await dex.methods.addLiquidity(initialAmountA, initialAmountB).send({ from: users[0], gas: 1000000 });
             console.log("Initial liquidity added by", users[0]);
@@ -152,7 +152,7 @@ async function simulateDEX() {
 
                 if (actionType < 0.35 && !reserveA_BN.isZero()) { // Add Liquidity
                     // ... (Add Liquidity logic - unchanged) ...
-                     console.log("Action: Add Liquidity");
+                    console.log("Action: Add Liquidity");
                     if (userBalanceA_BN.isZero()) { console.log("User has no Token A. Skipping."); slippages.push(null); continue; } // Push null to slippage
                     const amountADesired = userBalanceA_BN.mul(web3.utils.toBN(Math.floor(Math.random() * 20) + 1)).div(web3.utils.toBN(100));
                     const amountBDesired = amountADesired.mul(reserveB_BN).div(reserveA_BN).add(web3.utils.toBN(1));
@@ -165,7 +165,7 @@ async function simulateDEX() {
 
                 } else if (actionType < 0.55 && !userBalanceLP_BN.isZero()) { // Remove Liquidity
                     // ... (Remove Liquidity logic - unchanged) ...
-                     console.log("Action: Remove Liquidity");
+                    console.log("Action: Remove Liquidity");
                     const lpTokenAmount = userBalanceLP_BN.mul(web3.utils.toBN(Math.floor(Math.random() * 30) + 1)).div(web3.utils.toBN(100));
                     if (lpTokenAmount.isZero()) { console.log("Calculated LP Amount is zero. Skipping."); slippages.push(null); continue; }
                     console.log(`Attempting to remove liquidity with ${web3.utils.fromWei(lpTokenAmount)} LP tokens`);
@@ -205,28 +205,28 @@ async function simulateDEX() {
                         const swapEvent = receipt.events.Swap;
                         if (swapEvent) {
                             const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut);
-                             if (amountInActualBN.isZero()) { // Avoid division by zero if swap amount was tiny
-                                 slippages.push('0'); // Or null, or handle appropriately
-                             } else {
-                                 const actualPrice = amountOutActual.mul(web3.utils.toBN(1e18)).div(amountInActualBN); // B per A
-                                 const slippage = expectedPriceA.isZero() ? web3.utils.toBN(0) : expectedPriceA.sub(actualPrice).abs().mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceA);
-                                 slippages.push(slippage.toString());
-                                 console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18)) / 100}%`);
-                             }
+                            if (amountInActualBN.isZero()) { // Avoid division by zero if swap amount was tiny
+                                slippages.push('0'); // Or null, or handle appropriately
+                            } else {
+                                const actualPrice = amountOutActual.mul(web3.utils.toBN(1e18)).div(amountInActualBN); // B per A
+                                const slippage = expectedPriceA.isZero() ? web3.utils.toBN(0) : expectedPriceA.sub(actualPrice).abs().mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceA);
+                                slippages.push(slippage.toString());
+                                console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18)) / 100}%`);
+                            }
                         } else {
                             slippages.push(null);
                         }
 
                     } else { // Swap B for A
-                         // ... (amount calculation logic - largely unchanged) ...
+                        // ... (amount calculation logic - largely unchanged) ...
                         if (userBalanceB_BN.isZero()) { console.log("User has no Token B to swap. Skipping."); slippages.push(null); continue; }
                         const maxSwap = reserveB_BN.div(web3.utils.toBN(10));
                         const amountIn = userBalanceB_BN.lt(maxSwap) ? userBalanceB_BN : maxSwap;
                         const randomFraction = web3.utils.toBN(Math.floor(Math.random() * 90) + 1);
                         let amountInActual = amountIn.mul(randomFraction).div(web3.utils.toBN(100));
-                         if (amountInActual.isZero() && !amountIn.isZero()) amountInActual = web3.utils.toBN(1);
+                        if (amountInActual.isZero() && !amountIn.isZero()) amountInActual = web3.utils.toBN(1);
                         if (amountInActual.gt(userBalanceB_BN)) amountInActual = userBalanceB_BN;
-                         if (amountInActual.isZero()) { console.log("Swap Amount B is zero. Skipping."); slippages.push(null); continue; }
+                        if (amountInActual.isZero()) { console.log("Swap Amount B is zero. Skipping."); slippages.push(null); continue; }
 
                         amountInActualBN = amountInActual; // <<< Store the BN value
 
@@ -244,15 +244,15 @@ async function simulateDEX() {
                         const swapEvent = receipt.events.Swap;
                         if (swapEvent) {
                             const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut); // This is Amount A out
-                             if (amountOutActual.isZero()) { // Avoid division by zero
+                            if (amountOutActual.isZero()) { // Avoid division by zero
                                 slippages.push('0');
-                             } else {
+                            } else {
                                 const actualPrice = amountInActualBN.mul(web3.utils.toBN(1e18)).div(amountOutActual); // Price B per A
                                 const expectedPriceBperA = reserveA_BN.isZero() ? web3.utils.toBN(0) : reserveB_BN.mul(web3.utils.toBN(1e18)).div(reserveA_BN); // Price B per A
-                                const slippage = expectedPriceBperA.isZero() ? web3.utils.toBN(0) : expectedPriceBperA.sub(actualPrice).abs().mul(web3.utils.toBN(100*1e18)).div(expectedPriceBperA);
+                                const slippage = expectedPriceBperA.isZero() ? web3.utils.toBN(0) : expectedPriceBperA.sub(actualPrice).abs().mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceBperA);
                                 slippages.push(slippage.toString());
-                                console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18))/100}%`);
-                             }
+                                console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18)) / 100}%`);
+                            }
                         } else {
                             slippages.push(null);
                         }
@@ -292,11 +292,11 @@ async function simulateDEX() {
             } catch (error) {
                 console.error(`Transaction ${i + 1} failed for user ${userAccount}:`, error.message);
                 slippages.push(null);
-                 // Push null placeholders for other potentially skipped metrics on error
-                 feeDataA.push(cumulativeFeesA.toString()); // Store last known value
-                 feeDataB.push(cumulativeFeesB.toString()); // Store last known value
-                 // Could store null or last known snapshot for LP dist? Let's add null row.
-                 lpDistributionData.push(Array(users.length).fill(null));
+                // Push null placeholders for other potentially skipped metrics on error
+                feeDataA.push(cumulativeFeesA.toString()); // Store last known value
+                feeDataB.push(cumulativeFeesB.toString()); // Store last known value
+                // Could store null or last known snapshot for LP dist? Let's add null row.
+                lpDistributionData.push(Array(users.length).fill(null));
 
                 await new Promise(resolve => setTimeout(resolve, 100));
                 continue;
@@ -327,6 +327,22 @@ async function simulateDEX() {
             const bal = await lpToken.methods.balanceOf(users[k]).call();
             console.log(`User ${k + 1} (${users[k].substring(0, 6)}...): ${web3.utils.fromWei(bal)} LP`);
         }
+        const simulationData = {
+            timestamps: timestamps,
+            reserveRatios: reserveRatios,
+            spotPricesA: spotPricesA,
+            totalValuesLockedA: totalValuesLockedA,
+            totalValuesLockedB: totalValuesLockedB,
+            cumulativeSwapVolumeA: swapVolumesA,
+            cumulativeSwapVolumeB: swapVolumesB,
+            slippages: slippages,
+            cumulativeFeesA: feeDataA,
+            cumulativeFeesB: feeDataB,
+            lpDistributionSnapshots: lpDistributionData
+        };
+
+        await remix.call('fileManager', 'writeFile', 'browser/simulation_data.json', JSON.stringify(simulationData, null, 2));
+        console.log("Simulation data saved to browser/simulation_data.json");
 
     } catch (error) {
         console.error("Simulation failed:", error);

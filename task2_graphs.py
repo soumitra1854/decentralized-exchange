@@ -1,57 +1,44 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
-from decimal import Decimal, getcontext
+from decimal import Decimal
 import os
 
-timestamps_str = """
-[ PASTE_TIMESTAMPS_ARRAY_HERE ]
-"""
+# --- 1. Load Data From File ---
+print("Loading data from simulation file...")
 
-reserve_ratios_str = """
-[ PASTE_RESERVE_RATIOS_ARRAY_HERE ]
-"""
+# Path to the simulation data
+simulation_data_path = "simulation_data.json"
 
-# Spot price A is usually the same as reserve ratio B/A, but paste if logged separately
-spot_prices_a_str = """
-[ PASTE_SPOT_PRICES_A_ARRAY_HERE ]
-"""
-
-# TVL_A represents Token A reserves
-tvl_a_str = """
-[ PASTE_TOTAL_VALUE_LOCKED_A_ARRAY_HERE ]
-"""
-
-# TVL_B represents Token B reserves
-tvl_b_str = """
-[ PASTE_TOTAL_VALUE_LOCKED_B_ARRAY_HERE ]
-"""
-
-swap_vol_a_str = """
-[ PASTE_SWAP_VOLUME_A_ARRAY_HERE ]
-"""
-
-swap_vol_b_str = """
-[ PASTE_SWAP_VOLUME_B_ARRAY_HERE ]
-"""
-
-slippages_str = """
-[ PASTE_SLIPPAGES_ARRAY_HERE ]
-"""
-
-# <<< ADDED PLACEHOLDERS for Fee and LP Dist Data >>>
-feeDataA_str = """
-[ PASTE_CUMULATIVE_FEES_A_ARRAY_HERE ]
-"""
-
-feeDataB_str = """
-[ PASTE_CUMULATIVE_FEES_B_ARRAY_HERE ]
-"""
-
-# This will be a nested array (list of lists)
-lpDistributionData_str = """
-[ PASTE_LP_DISTRIBUTION_SNAPSHOTS_ARRAY_HERE ]
-"""
+try:
+    with open(simulation_data_path, 'r') as f:
+        simulation_data = json.load(f)
+    
+    # Extract data from the loaded JSON
+    timestamps = simulation_data['timestamps']
+    reserve_ratios_raw = simulation_data['reserveRatios']
+    spot_prices_a_raw = simulation_data['spotPricesA']
+    tvl_a_raw = simulation_data['totalValuesLockedA']
+    tvl_b_raw = simulation_data['totalValuesLockedB']
+    swap_vol_a_raw = simulation_data['cumulativeSwapVolumeA']
+    swap_vol_b_raw = simulation_data['cumulativeSwapVolumeB']
+    slippages_raw = simulation_data['slippages']
+    feeDataA_raw = simulation_data['cumulativeFeesA']
+    feeDataB_raw = simulation_data['cumulativeFeesB']
+    lpDistributionData_raw = simulation_data['lpDistributionSnapshots']
+    
+    print("Data loaded successfully from file.")
+    
+except FileNotFoundError:
+    print(f"Error: Could not find simulation data file at {simulation_data_path}")
+    print("Please run the DEX simulation first and ensure the data file is in the correct location.")
+    exit(1)
+except json.JSONDecodeError:
+    print(f"Error: Simulation data file is not valid JSON.")
+    exit(1)
+except KeyError as e:
+    print(f"Error: Simulation data file is missing expected data field: {e}")
+    exit(1)
 
 # --- 2. Process Data ---
 print("Processing data...")
@@ -59,18 +46,6 @@ print("Processing data...")
 # Set the decimal precision (assuming 18 for typical ERC20 tokens)
 DECIMALS = 18
 WEI = Decimal(10**DECIMALS)
-
-# Helper functions for safe conversion (same as before)
-def safe_json_loads(data_str, name):
-    """Safely loads JSON data or returns already processed data."""
-    if isinstance(data_str, (list, dict)):
-        return data_str # Already processed
-    try:
-        return json.loads(data_str.strip())
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON for {name}: {e}")
-        print(f"Data: {data_str[:100]}...")
-        return None
 
 def wei_to_decimal(wei_str):
     """Converts a Wei string amount to Decimal, handling None or '0'."""
@@ -90,28 +65,9 @@ def slippage_to_percent(slippage_str):
     try: return Decimal(slippage_str) / WEI
     except Exception: return None
 
-# Load data using helper function
-timestamps = safe_json_loads(timestamps_str, "Timestamps")
-reserve_ratios_raw = safe_json_loads(reserve_ratios_str, "Reserve Ratios")
-spot_prices_a_raw = safe_json_loads(spot_prices_a_str, "Spot Prices A")
-tvl_a_raw = safe_json_loads(tvl_a_str, "TVL A (Reserves)")
-tvl_b_raw = safe_json_loads(tvl_b_str, "TVL B (Reserves)")
-swap_vol_a_raw = safe_json_loads(swap_vol_a_str, "Swap Volume A")
-swap_vol_b_raw = safe_json_loads(swap_vol_b_str, "Swap Volume B")
-slippages_raw = safe_json_loads(slippages_str, "Slippages")
-# <<< ADDED loading for new data >>>
-feeDataA_raw = safe_json_loads(feeDataA_str, "Cumulative Fees A")
-feeDataB_raw = safe_json_loads(feeDataB_str, "Cumulative Fees B")
-lpDistributionData_raw = safe_json_loads(lpDistributionData_str, "LP Distribution Snapshots")
-
-# Exit if any data failed to load
-if any(d is None for d in [timestamps, reserve_ratios_raw, spot_prices_a_raw, tvl_a_raw, tvl_b_raw, swap_vol_a_raw, swap_vol_b_raw, slippages_raw, feeDataA_raw, feeDataB_raw, lpDistributionData_raw]):
-    print("Exiting due to data loading errors. Please check pasted data.")
-    exit()
-
 # Convert data to numerical types (Decimal) for plotting
 n_points = len(timestamps)
-time_axis = np.arange(n_points) # Use transaction index as time axis
+time_axis = np.arange(n_points)  # Use transaction index as time axis
 
 reserves_a = [wei_to_decimal(r) for r in tvl_a_raw]
 reserves_b = [wei_to_decimal(r) for r in tvl_b_raw]
@@ -125,27 +81,26 @@ slippages_percent = [slippage_to_percent(s) for s in slippages_raw]
 slippage_time_axis = [i for i, s in enumerate(slippages_percent) if s is not None]
 slippage_values = [s for s in slippages_percent if s is not None]
 
-# <<< ADDED processing for new data >>>
+# Process fee data
 fees_a = [wei_to_decimal(f) for f in feeDataA_raw]
 fees_b = [wei_to_decimal(f) for f in feeDataB_raw]
 
 # Process LP Distribution Data
 try:
-    lp_distribution = np.array([[wei_to_decimal(bal) for bal in snapshot]
+    lp_distribution = np.array([[wei_to_decimal(bal) for bal in snapshot] 
                                 for snapshot in lpDistributionData_raw], dtype=Decimal)
     # Ensure consistent number of users across snapshots if no errors occurred
     if len(lpDistributionData_raw) > 0:
-         num_users = lp_distribution.shape[1]
-         print(f"Processed LP distribution data for {num_users} users across {len(lp_distribution)} snapshots.")
+        num_users = lp_distribution.shape[1]
+        print(f"Processed LP distribution data for {num_users} users across {len(lp_distribution)} snapshots.")
     else:
-         num_users = 0
-         print("LP distribution data is empty.")
+        num_users = 0
+        print("LP distribution data is empty.")
 except Exception as e:
     print(f"Error processing LP Distribution data: {e}")
-    print("Ensure it's a list of lists of numbers (as strings). Setting num_users to 0.")
-    num_users = 0 # Set num_users to 0 if processing fails
-    lp_distribution = np.array([[]], dtype=Decimal) # Empty array
-
+    print("Setting num_users to 0.")
+    num_users = 0
+    lp_distribution = np.array([[]], dtype=Decimal)
 
 print("Data processed successfully.")
 
