@@ -5,12 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /*
- * @title MyToken
+ * @title Token
  * @dev Basic ERC20 token implementation for Task 1.
  * This single contract file will be deployed twice (once for TokenA, once for TokenB).
 */
 
-contract MyToken is ERC20, Ownable {
+contract Token is ERC20, Ownable {
     constructor(
         string memory name_,
         string memory symbol_,

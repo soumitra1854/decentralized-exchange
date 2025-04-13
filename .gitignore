@@ -2,3 +2,7 @@
 .states/
 artifacts/
 .prettierrc.json
+*.aux
+*.out
+*.log
+*.gz
