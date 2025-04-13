@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; // To manage funds/control execution
-import "@openzeppelin/contracts/utils/math/SafeMath.sol"; // Or rely on 0.8+ checks
+import "@openzeppelin/contracts/access/Ownable.sol"; 
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 // Define an interface for the DEX contract functions needed
 interface IDEX {
@@ -188,19 +188,19 @@ contract Arbitrage is Ownable {
         // --- Execute Best Opportunity if Profit > Threshold ---
         if (profitA_12 > minProfitThreshold && profitA_12 >= profitA_21 && profitA_12 >= profitB_12 && profitA_12 >= profitB_21) {
             // Execute A -> DEX1(B) -> DEX2(A)
-            _executeSwapSequence(_amountA, address(tokenA), dex1, dex2, profitA_12);
+            _executeSwapSequence(_amountA, address(tokenA), dex1, dex2);
 
         } else if (profitA_21 > minProfitThreshold && profitA_21 >= profitA_12 && profitA_21 >= profitB_12 && profitA_21 >= profitB_21) {
             // Execute A -> DEX2(B) -> DEX1(A)
-             _executeSwapSequence(_amountA, address(tokenA), dex2, dex1, profitA_21);
+             _executeSwapSequence(_amountA, address(tokenA), dex2, dex1);
 
         } else if (profitB_12 > minProfitThreshold && profitB_12 >= profitA_12 && profitB_12 >= profitA_21 && profitB_12 >= profitB_21) {
             // Execute B -> DEX1(A) -> DEX2(B)
-             _executeSwapSequence(_amountB, address(tokenB), dex1, dex2, profitB_12);
+             _executeSwapSequence(_amountB, address(tokenB), dex1, dex2);
 
         } else if (profitB_21 > minProfitThreshold && profitB_21 >= profitA_12 && profitB_21 >= profitA_21 && profitB_21 >= profitB_12) {
             // Execute B -> DEX2(A) -> DEX1(B)
-            _executeSwapSequence(_amountB, address(tokenB), dex2, dex1, profitB_21);
+            _executeSwapSequence(_amountB, address(tokenB), dex2, dex1);
         } else {
              // No profitable opportunity found or profit too low
              // Optional: emit an event here
@@ -217,8 +217,7 @@ contract Arbitrage is Ownable {
         uint256 _amountIn,
         address _tokenIn,
         IDEX _startDex,
-        IDEX _endDex,
-        uint256 _estimatedProfit
+        IDEX _endDex
     ) internal {
         IERC20 startToken = IERC20(_tokenIn);
         IERC20 intermediateToken = (_tokenIn == address(tokenA)) ? tokenB : tokenA;
