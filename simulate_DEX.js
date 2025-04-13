@@ -8,14 +8,14 @@ async function simulateDEX() {
         const TOTAL_USERS = NUM_LPS + NUM_TRADERS;
 
         // --- deployed contract addresses ---
-        const TOKEN_A_ADDRESS = "0x5FD6eB55D12E759a21C09eF703fe0CBa1DC9d88D";
-        const TOKEN_B_ADDRESS = "0x7b96aF9Bd211cBf6BA5b0dd53aa61Dc5806b6AcE";
-        const LP_TOKEN_ADDRESS = "0x3328358128832A260C76A4141e19E2A943CD4B6D";
-        const DEX_ADDRESS = "0x5e17b14ADd6c386305A32928F985b29bbA34Eff5";
+        const TOKEN_A_ADDRESS = "0xDA0bab807633f07f013f94DD0E6A4F96F8742B53";
+        const TOKEN_B_ADDRESS = "0x358AA13c52544ECCEF6B0ADD0f801012ADAD5eE3";
+        const LP_TOKEN_ADDRESS = "0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99";
+        const DEX_ADDRESS = "0xd2a5bC10698FD955D1Fe6cb468a17809A08fd005";
 
         // ABIs paths
         console.log("Fetching ABIs...");
-        const tokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/MyToken.json'));
+        const tokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/Token.json'));
         const lpTokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/LPToken.json'));
         const dexABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/DEX.json'));
 
