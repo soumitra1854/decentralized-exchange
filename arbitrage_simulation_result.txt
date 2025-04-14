@@ -1,0 +1,69 @@
+Starting Arbitrage Simulation...
+Fetching ABIs...
+Getting accounts...
+Using deployer: 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+Using initial LP: 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+Instantiating contracts...
+Arbitrage contract instantiated at:
+0xB57ee0797C3fc0205714a577c02F7205bB89dF30
+
+--- Starting Automated Setup ---
+Funding initial LP account 0xAb8483...
+Sending 200 Token A to LP...
+Sending 410 Token B to LP...
+LP funding complete.
+Setting approvals for initial LP account 0xAb8483...
+ -> DEX 1 approved by LP.
+ -> DEX 2 approved by LP.
+LP approvals complete.
+Adding initial liquidity from LP account 0xAb8483...
+Adding liquidity to DEX 1 (100 A / 200 B)...
+ -> Liquidity added to DEX 1.
+Adding liquidity to DEX 2 (100 A / 210 B)...
+ -> Liquidity added to DEX 2.
+Initial liquidity provision complete.
+Funding Arbitrage contract 0xB57ee0...
+Sending 10 Token A to Arbitrage Contract...
+Sending 10 Token B to Arbitrage Contract...
+Arbitrage contract funding complete.
+--- Automated Setup Complete ---
+
+Arbitrage Contract Balance Check: 10 A, 10 B
+
+>>> SCENARIO 1: Attempting Profitable Arbitrage <<<
+
+Before Scenario 1--- Current State ---
+DEX 1 Price (B per A): 2
+DEX 2 Price (B per A): 2.1
+Arbitrage Contract Balance: 10 A, 10 B
+----------------------
+Calling executeArbitrage(1 A, 1 B)...
+>>> Arbitrage Executed Successfully! <<<
+  Start Token:
+0xC3Ba5050Ec45990f76474163c5bA673c244aaECA
+
+After Scenario 1--- Current State ---
+DEX 1 Price (B per A): 2.020019849999999999
+DEX 2 Price (B per A): 2.079351631259404648
+Arbitrage Contract Balance: 10 A, 10.033421690566435061 B
+----------------------
+
+>>> SCENARIO 2: Attempting Arbitrage with High Threshold (Expect No Execution) <<<
+Setting minProfitThreshold to a very high value...
+minProfitThreshold updated.
+
+Before Scenario 2 Execution--- Current State ---
+DEX 1 Price (B per A): 2.020019849999999999
+DEX 2 Price (B per A): 2.079351631259404648
+Arbitrage Contract Balance: 10 A, 10.033421690566435061 B
+----------------------
+Calling executeArbitrage(1 A, 1 B) again...
+>>> No arbitrage executed as expected (profit likely below new high threshold). <<<
+
+After Scenario 2--- Current State ---
+DEX 1 Price (B per A): 2.020019849999999999
+DEX 2 Price (B per A): 2.079351631259404648
+Arbitrage Contract Balance: 10 A, 10.033421690566435061 B
+----------------------
+
+--- Arbitrage Simulation Complete ---

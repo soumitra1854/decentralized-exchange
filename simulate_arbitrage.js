@@ -1,11 +1,11 @@
 async function simulateArbitrage() {
     console.log("Starting Arbitrage Simulation...");
     try {
-        const TOKEN_A_ADDRESS = "0x0fC5025C764cE34df352757e82f7B5c4Df39A836";
-        const TOKEN_B_ADDRESS = "0xb27A31f1b0AF2946B7F582768f03239b1eC07c2c"; 
-        const DEX1_ADDRESS = "0x9d83e140330758a8fFD07F8Bd73e86ebcA8a5692";      
-        const DEX2_ADDRESS = "0xD4Fc541236927E2EAf8F27606bD7309C1Fc2cbee";   
-        const ARBITRAGE_ADDRESS = "0x93f8dddd876c7dBE3323723500e83E202A7C96CC"; 
+        const TOKEN_A_ADDRESS = "0x38cB7800C3Fddb8dda074C1c650A155154924C73";
+        const TOKEN_B_ADDRESS = "0xC3Ba5050Ec45990f76474163c5bA673c244aaECA"; 
+        const DEX1_ADDRESS = "0x0813d4a158d06784FDB48323344896B2B1aa0F85";      
+        const DEX2_ADDRESS = "0xE5f2A565Ee0Aa9836B4c80a07C8b32aAd7978e22";   
+        const ARBITRAGE_ADDRESS = "0xB57ee0797C3fc0205714a577c02F7205bB89dF30"; 
         // --- ABIs ---
         console.log("Fetching ABIs...");
         const tokenABIMeta = JSON.parse(await remix.call('fileManager', 'getFile', 'browser/artifacts/Token.json'));
