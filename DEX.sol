@@ -57,8 +57,6 @@ contract DEX {
 
     /**
      * @dev Constructor: Initializes with token addresses and deploys LPToken.
-     * IMPORTANT: Ensure the account deploying DEX has ownership of LPToken transferred to it,
-     * OR deploy LPToken here and ensure DEX owns it.
      */
     constructor(
         address _tokenA,
@@ -76,8 +74,6 @@ contract DEX {
         tokenB = IERC20(_tokenB);
         lpToken = LPToken(_lpTokenAddress);
     }
-
-    // --- View Functions ---
 
     /**
      * @dev Returns the current reserves.
@@ -106,8 +102,6 @@ contract DEX {
         require(reserveB > 0, "DEX: Zero reserve B");
         price = reserveA.mul(1e18).div(reserveB);
     }
-    
-    // --- Liquidity Functions ---
     /**
      * @dev Adds liquidity. Uses SafeERC20.
      */
@@ -120,9 +114,6 @@ contract DEX {
             uint256 lpTokens
         )
     {
-        // --- Checks ---
-        // Logic to determine actual amountA and amountB based on ratio (same as before)
-        // Ensure you handle the first liquidity provider case correctly.
         uint256 totalLPSupply = lpToken.totalSupply();
         if (reserveA == 0 && reserveB == 0) {
             require(
@@ -131,8 +122,6 @@ contract DEX {
             );
             amountA = amountADesired;
             amountB = amountBDesired;
-            // Mint initial LP tokens - requires careful calculation for value.
-            // Using a fixed amount or sqrt(a*b). Let's use 1000 units example again.
             lpTokens = Math.sqrt(amountADesired.mul(amountBDesired));
             require(lpTokens > 0, "DEX: Initial LP mint must be > 0");
         } else {
@@ -155,18 +144,10 @@ contract DEX {
             require(lpTokens > 0, "DEX: LP mint must be > 0");
         }
 
-        // --- Effects ---
-        // Mint LP tokens *before* pulling underlying tokens
         lpToken.mint(msg.sender, lpTokens);
-
-        // Update reserves *before* pulling underlying tokens
         reserveA = reserveA.add(amountA);
         reserveB = reserveB.add(amountB);
-
         emit LiquidityAdded(msg.sender, amountA, amountB, lpTokens);
-
-        // --- Interactions ---
-        // Use SafeERC20's safeTransferFrom
         tokenA.safeTransferFrom(msg.sender, address(this), amountA);
         tokenB.safeTransferFrom(msg.sender, address(this), amountB);
     }
@@ -186,8 +167,6 @@ contract DEX {
             lpTokenAmount <= totalLPSupply,
             "DEX: Amount exceeds total supply"
         );
-
-        // Calculate amounts to withdraw (same as before)
         amountA = reserveA.mul(lpTokenAmount).div(totalLPSupply);
         amountB = reserveB.mul(lpTokenAmount).div(totalLPSupply);
         require(
@@ -197,41 +176,29 @@ contract DEX {
 
         reserveA = reserveA.sub(amountA);
         reserveB = reserveB.sub(amountB);
-
-        // Pull LP tokens from user and burn them *before* sending A and B out
-        // User MUST have approved the DEX to spend their LP tokens beforehand.
         lpToken.safeTransferFrom(msg.sender, address(this), lpTokenAmount);
         lpToken.burn(address(this), lpTokenAmount); // Burn tokens now held by DEX
-
         emit LiquidityRemoved(msg.sender, amountA, amountB, lpTokenAmount);
-
-        // --- Interactions ---
-        // Transfer Token A and B *last*
         tokenA.safeTransfer(msg.sender, amountA);
         tokenB.safeTransfer(msg.sender, amountB);
     }
-
-    // --- Swap Function ---
 
     /**
      * @dev Swaps tokens. Uses SafeERC20.
      */
     function swap(address tokenIn, uint256 amountIn)
         external
-        nonReentrant // Add reentrancy guard
+        nonReentrant 
         returns (uint256 amountOut)
     {
-        // --- Checks ---
         require(
             tokenIn == address(tokenA) || tokenIn == address(tokenB),
             "DEX: Invalid input token"
         );
         require(amountIn > 0, "DEX: Amount in must be > 0");
-
-        // Determine input/output reserves and output token (same as before)
         uint256 reserveIn;
         uint256 reserveOut;
-        IERC20 tokenOutIERC20; // Use IERC20 type here
+        IERC20 tokenOutIERC20;
         if (tokenIn == address(tokenA)) {
             reserveIn = reserveA;
             reserveOut = reserveB;
@@ -241,20 +208,13 @@ contract DEX {
             reserveOut = reserveA;
             tokenOutIERC20 = tokenA;
         }
-
-        // Calculate amountIn after fee (same as before)
         uint256 amountInWithFee = amountIn
             .mul(FEE_DENOMINATOR.sub(FEE_NUMERATOR))
             .div(FEE_DENOMINATOR);
-
-        // Calculate amountOut (same as before)
         uint256 numerator = reserveOut.mul(amountInWithFee);
         uint256 denominator = reserveIn.add(amountInWithFee);
         amountOut = numerator.div(denominator);
         require(amountOut > 0, "DEX: Insufficient output amount");
-
-        // --- Effects ---
-        // Update reserves *before* sending tokens out
         if (tokenIn == address(tokenA)) {
             reserveA = reserveA.add(amountIn);
             reserveB = reserveB.sub(amountOut);
@@ -262,7 +222,6 @@ contract DEX {
             reserveB = reserveB.add(amountIn);
             reserveA = reserveA.sub(amountOut);
         }
-
         emit Swap(
             msg.sender,
             tokenIn,
@@ -270,12 +229,7 @@ contract DEX {
             address(tokenOutIERC20),
             amountOut
         );
-
-        // --- Interactions ---
-        // Pull tokenIn *first* using SafeERC20
         IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
-
-        // Send tokenOut *last* using SafeERC20
         tokenOutIERC20.safeTransfer(msg.sender, amountOut);
     }
 }

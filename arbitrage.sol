@@ -35,15 +35,7 @@ contract Arbitrage is Ownable {
     IDEX public immutable dex1;
     IDEX public immutable dex2;
 
-    uint256 public minProfitThreshold = 1;
-
-    uint256 private _locked = 0; // 0 = not locked, 1 = locked
-    modifier nonReentrant() {
-        require(_locked == 0, "Arbitrage: Reentrant call");
-        _locked = 1;
-        _;
-        _locked = 0;
-    }
+    uint256 public minProfitThreshold = 1; // Example: 1 Wei
 
     event ArbitrageExecuted(
         address startToken,
@@ -56,6 +48,17 @@ contract Arbitrage is Ownable {
         address dexPathEnd
     );
 
+    uint256 private _locked = 0; // 0 = not locked, 1 = locked
+    modifier nonReentrant() {
+        require(_locked == 0, "Arbitrage: Reentrant call");
+        _locked = 1;
+        _;
+        _locked = 0;
+    }
+
+    /**
+     * @dev Constructor initializes with token and DEX addresses.
+     */
     constructor(
         address _tokenA,
         address _tokenB,
@@ -70,6 +73,9 @@ contract Arbitrage is Ownable {
 
     receive() external payable {}
 
+    /**
+     * @dev Allows owner to withdraw accumulated tokens (profit or remaining capital).
+     */
     function withdrawTokens(address _tokenAddress, uint256 _amount)
         external
         onlyOwner
@@ -82,6 +88,9 @@ contract Arbitrage is Ownable {
         IERC20(_tokenAddress).safeTransfer(owner(), _amount);
     }
 
+    /**
+     * @dev Allows owner to withdraw all balance of a specific token.
+     */
     function withdrawAll(address _tokenAddress) external onlyOwner {
         require(
             _tokenAddress == address(tokenA) ||
@@ -92,6 +101,9 @@ contract Arbitrage is Ownable {
         IERC20(_tokenAddress).safeTransfer(owner(), balance);
     }
 
+    /**
+     * @dev Sets the minimum profit threshold required to execute arbitrage.
+     */
     function setMinProfitThreshold(uint256 _threshold) external onlyOwner {
         minProfitThreshold = _threshold;
     }
@@ -120,12 +132,12 @@ contract Arbitrage is Ownable {
             reserveIn = dexReserveA;
             reserveOut = dexReserveB;
         } else {
-            require(_tokenIn == _dex.tokenB(), "Arbitrage: Invalid _tokenIn");
+            require(_tokenIn == _dex.tokenB(), "Arbitrage: Invalid _tokenIn"); // Add check
             reserveIn = dexReserveB;
             reserveOut = dexReserveA;
         }
         if (reserveIn == 0 || reserveOut == 0 || _amountIn == 0) {
-            return 0;
+            return 0; // No liquidity or no input amount
         }
         uint256 feeNumerator = 3;
         uint256 feeDenominator = 1000;
@@ -156,20 +168,18 @@ contract Arbitrage is Ownable {
             tokenB.balanceOf(address(this)) >= _amountB,
             "Insufficient Token B balance"
         );
-        // --- Opportunity 1: A -> B -> A, 1 -> 2---
-        // How much B would we get for _amountA on DEX1?
+
+        // --- Opportunity 1: A -> B -> A, 1 -> 2 ---
         uint256 expectedBFromDex1 = getAmountOut(
             _amountA,
             address(tokenA),
             dex1
         );
-        // How much A would we get back for that amount of B on DEX2?
         uint256 expectedAFromDex2 = getAmountOut(
             expectedBFromDex1,
             address(tokenB),
             dex2
         );
-        // profit
         uint256 profitA_12 = (expectedAFromDex2 > _amountA)
             ? expectedAFromDex2.sub(_amountA)
             : 0;
@@ -204,7 +214,7 @@ contract Arbitrage is Ownable {
             ? expectedBFromDex2_A.sub(_amountB)
             : 0;
 
-        // --- Opportunity 4: B -> A -> B (Reverse Path), 2 -> 1 ---
+        // --- Opportunity 4: B -> A -> B, 2 -> 1 ---
         uint256 expectedAFromDex2_B = getAmountOut(
             _amountB,
             address(tokenB),
@@ -218,8 +228,6 @@ contract Arbitrage is Ownable {
         uint256 profitB_21 = (expectedBFromDex1_A > _amountB)
             ? expectedBFromDex1_A.sub(_amountB)
             : 0;
-
-        // --- Execute Best Opportunity if Profit > Threshold ---
         if (
             profitA_12 > minProfitThreshold &&
             profitA_12 >= profitA_21 &&
@@ -290,7 +298,7 @@ contract Arbitrage is Ownable {
             "Arbitrage: Execution resulted in loss"
         );
 
-        // Reset approvals (good practice)
+        // Reset approvals 
         startToken.approve(address(_startDex), 0);
         intermediateToken.approve(address(_endDex), 0);
 
@@ -300,7 +308,7 @@ contract Arbitrage is Ownable {
             address(intermediateToken),
             actualIntermediateAmount,
             actualEndAmount,
-            actualEndAmount.sub(_amountIn),
+            actualEndAmount.sub(_amountIn), // Actual profit
             address(_startDex),
             address(_endDex)
         );
