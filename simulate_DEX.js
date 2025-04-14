@@ -117,16 +117,14 @@ async function simulateDEX() {
         let slippages = [];
         let feeDataA = [];
         let feeDataB = [];
-        let lpDistributionData = []; // Array of snapshots
+        let lpDistributionData = [];
 
         let cumulativeFeesA = web3.utils.toBN(0);
         let cumulativeFeesB = web3.utils.toBN(0);
-        // <<< Renamed existing cumulative volume variables for clarity >>>
         let cumulativeVolSwappedInA = web3.utils.toBN(0);
         let cumulativeVolSwappedInB = web3.utils.toBN(0);
 
         console.log(`Starting ${N_TRANSACTIONS} random transactions...`);
-        // --- Simulation Loop ---
         for (let i = 0; i < N_TRANSACTIONS; i++) {
             console.log(`\n--- Transaction ${i + 1}/${N_TRANSACTIONS} ---`);
             const userIndex = Math.floor(Math.random() * users.length);
@@ -151,9 +149,8 @@ async function simulateDEX() {
                 const feeDenominator = web3.utils.toBN(1000);
 
                 if (actionType < 0.35 && !reserveA_BN.isZero()) { // Add Liquidity
-                    // ... (Add Liquidity logic - unchanged) ...
                     console.log("Action: Add Liquidity");
-                    if (userBalanceA_BN.isZero()) { console.log("User has no Token A. Skipping."); slippages.push(null); continue; } // Push null to slippage
+                    if (userBalanceA_BN.isZero()) { console.log("User has no Token A. Skipping."); slippages.push(null); continue; } 
                     const amountADesired = userBalanceA_BN.mul(web3.utils.toBN(Math.floor(Math.random() * 20) + 1)).div(web3.utils.toBN(100));
                     const amountBDesired = amountADesired.mul(reserveB_BN).div(reserveA_BN).add(web3.utils.toBN(1));
                     if (userBalanceB_BN.lt(amountBDesired)) { console.log("User has insufficient Token B for ratio. Skipping."); slippages.push(null); continue; }
@@ -164,7 +161,6 @@ async function simulateDEX() {
                     slippages.push(null); // No slippage for addLiquidity
 
                 } else if (actionType < 0.55 && !userBalanceLP_BN.isZero()) { // Remove Liquidity
-                    // ... (Remove Liquidity logic - unchanged) ...
                     console.log("Action: Remove Liquidity");
                     const lpTokenAmount = userBalanceLP_BN.mul(web3.utils.toBN(Math.floor(Math.random() * 30) + 1)).div(web3.utils.toBN(100));
                     if (lpTokenAmount.isZero()) { console.log("Calculated LP Amount is zero. Skipping."); slippages.push(null); continue; }
@@ -176,16 +172,14 @@ async function simulateDEX() {
                 } else if (!reserveA_BN.isZero() && !reserveB_BN.isZero()) { // Swap
                     console.log("Action: Swap");
                     const swapAtoB = Math.random() < 0.5;
-                    let amountInActualBN; // <<< Keep track of actual amount swapped
-
+                    let amountInActualBN;
                     if (swapAtoB) { // Swap A for B
-                        // ... (amount calculation logic - largely unchanged) ...
                         if (userBalanceA_BN.isZero()) { console.log("User has no Token A to swap. Skipping."); slippages.push(null); continue; }
                         const maxSwap = reserveA_BN.div(web3.utils.toBN(10));
                         const amountIn = userBalanceA_BN.lt(maxSwap) ? userBalanceA_BN : maxSwap;
                         const randomFraction = web3.utils.toBN(Math.floor(Math.random() * 90) + 1);
                         let amountInActual = amountIn.mul(randomFraction).div(web3.utils.toBN(100));
-                        if (amountInActual.isZero() && !amountIn.isZero()) amountInActual = web3.utils.toBN(1); // Prevent zero swap if possible
+                        if (amountInActual.isZero() && !amountIn.isZero()) amountInActual = web3.utils.toBN(1);
                         if (amountInActual.gt(userBalanceA_BN)) amountInActual = userBalanceA_BN;
                         if (amountInActual.isZero()) { console.log("Swap Amount A is zero. Skipping."); slippages.push(null); continue; }
 
@@ -205,8 +199,8 @@ async function simulateDEX() {
                         const swapEvent = receipt.events.Swap;
                         if (swapEvent) {
                             const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut);
-                            if (amountInActualBN.isZero()) { // Avoid division by zero if swap amount was tiny
-                                slippages.push('0'); // Or null, or handle appropriately
+                            if (amountInActualBN.isZero()) { 
+                                slippages.push('0'); 
                             } else {
                                 const actualPrice = amountOutActual.mul(web3.utils.toBN(1e18)).div(amountInActualBN); // B per A
                                 const slippage = expectedPriceA.isZero() ? web3.utils.toBN(0) : expectedPriceA.sub(actualPrice).abs().mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceA);
@@ -218,7 +212,6 @@ async function simulateDEX() {
                         }
 
                     } else { // Swap B for A
-                        // ... (amount calculation logic - largely unchanged) ...
                         if (userBalanceB_BN.isZero()) { console.log("User has no Token B to swap. Skipping."); slippages.push(null); continue; }
                         const maxSwap = reserveB_BN.div(web3.utils.toBN(10));
                         const amountIn = userBalanceB_BN.lt(maxSwap) ? userBalanceB_BN : maxSwap;
@@ -243,8 +236,8 @@ async function simulateDEX() {
                         // Slippage Calculation
                         const swapEvent = receipt.events.Swap;
                         if (swapEvent) {
-                            const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut); // This is Amount A out
-                            if (amountOutActual.isZero()) { // Avoid division by zero
+                            const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut);
+                            if (amountOutActual.isZero()) { 
                                 slippages.push('0');
                             } else {
                                 const actualPrice = amountInActualBN.mul(web3.utils.toBN(1e18)).div(amountOutActual); // Price B per A
@@ -278,8 +271,6 @@ async function simulateDEX() {
 
                 feeDataA.push(cumulativeFeesA.toString());
                 feeDataB.push(cumulativeFeesB.toString());
-
-                // Capture LP Distribution Snapshot
                 let currentLPDistribution = [];
                 for (const user of users) {
                     const bal = await lpToken.methods.balanceOf(user).call();
@@ -287,17 +278,13 @@ async function simulateDEX() {
                 }
                 lpDistributionData.push(currentLPDistribution);
 
-                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-
+                await new Promise(resolve => setTimeout(resolve, 100));
             } catch (error) {
                 console.error(`Transaction ${i + 1} failed for user ${userAccount}:`, error.message);
                 slippages.push(null);
-                // Push null placeholders for other potentially skipped metrics on error
-                feeDataA.push(cumulativeFeesA.toString()); // Store last known value
-                feeDataB.push(cumulativeFeesB.toString()); // Store last known value
-                // Could store null or last known snapshot for LP dist? Let's add null row.
+                feeDataA.push(cumulativeFeesA.toString());
+                feeDataB.push(cumulativeFeesB.toString());
                 lpDistributionData.push(Array(users.length).fill(null));
-
                 await new Promise(resolve => setTimeout(resolve, 100));
                 continue;
             }
@@ -340,10 +327,8 @@ async function simulateDEX() {
             cumulativeFeesB: feeDataB,
             lpDistributionSnapshots: lpDistributionData
         };
-
         await remix.call('fileManager', 'writeFile', 'browser/simulation_data.json', JSON.stringify(simulationData, null, 2));
         console.log("Simulation data saved to browser/simulation_data.json");
-
     } catch (error) {
         console.error("Simulation failed:", error);
     }
