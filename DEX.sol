@@ -106,7 +106,7 @@ contract DEX {
         require(reserveB > 0, "DEX: Zero reserve B");
         price = reserveA.mul(1e18).div(reserveB);
     }
-
+    
     // --- Liquidity Functions ---
     /**
      * @dev Adds liquidity. Uses SafeERC20.
