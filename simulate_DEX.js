@@ -241,9 +241,9 @@ async function simulateDEX() {
                             if (amountOutActual.isZero()) {
                                 slippages.push('0');
                             } else {
-                                const actualPrice = amountInActualBN.mul(web3.utils.toBN(1e18)).div(amountOutActual); // Price B per A
-                                const expectedPriceBperA = reserveA_BN.isZero() ? web3.utils.toBN(0) : reserveB_BN.mul(web3.utils.toBN(1e18)).div(reserveA_BN); // Price B per A
-                                const slippage = expectedPriceBperA.isZero() ? web3.utils.toBN(0) : actualPrice.sub(expectedPriceBperA).mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceBperA);
+                                const actualPrice = amountOutActual.mul(web3.utils.toBN(1e18)).div(amountInActualBN); // Price A per B
+                                const expectedPriceAperB = reserveB_BN.isZero() ? web3.utils.toBN(0) : reserveA_BN.mul(web3.utils.toBN(1e18)).div(reserveB_BN); // Price A per B
+                                const slippage = expectedPriceAperB.isZero() ? web3.utils.toBN(0) : actualPrice.sub(expectedPriceAperB).mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceAperB);
                                 slippages.push(slippage.toString());
                                 console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18)) / 100}%`);
                             }
