@@ -14,18 +14,17 @@ try:
     with open(simulation_data_path, 'r') as f:
         simulation_data = json.load(f)
     
-    # Extract data from the loaded JSON
+    # Extract data from the loaded JSON based on the new structure
     timestamps = simulation_data['timestamps']
-    reserve_ratios_raw = simulation_data['reserveRatios']
-    spot_prices_a_raw = simulation_data['spotPricesA']
     tvl_a_raw = simulation_data['totalValuesLockedA']
     tvl_b_raw = simulation_data['totalValuesLockedB']
+    spot_prices_b_raw = simulation_data['spotPricesB']  # Now using spotPricesB for reserve ratio
     swap_vol_a_raw = simulation_data['cumulativeSwapVolumeA']
     swap_vol_b_raw = simulation_data['cumulativeSwapVolumeB']
     slippages_raw = simulation_data['slippages']
     feeDataA_raw = simulation_data['cumulativeFeesA']
     feeDataB_raw = simulation_data['cumulativeFeesB']
-    lpDistributionData_raw = simulation_data['lpDistributionSnapshots']
+    lpDistributionData_raw = simulation_data['lpDistributionSnapshots']  # Now only for 5 LPs
     
     print("Data loaded successfully from file.")
     
@@ -59,10 +58,10 @@ def scaled_to_decimal(scaled_str):
     try: return Decimal(scaled_str) / WEI
     except Exception: return Decimal(0)
 
-def slippage_to_percent(slippage_str):
-    """Converts slippage (Percent * 1e18 string or null) to Decimal percent."""
+def slippage_to_decimal(slippage_str):
+    """Converts slippage (Percent * 1e18 string or null) to Decimal percent without abs()."""
     if slippage_str is None or slippage_str == 'null': return None
-    try: return Decimal(slippage_str) / WEI
+    try: return Decimal(slippage_str) / WEI  # No abs() here to keep sign
     except Exception: return None
 
 # Convert data to numerical types (Decimal) for plotting
@@ -73,11 +72,15 @@ reserves_a = [wei_to_decimal(r) for r in tvl_a_raw]
 reserves_b = [wei_to_decimal(r) for r in tvl_b_raw]
 volume_a = [wei_to_decimal(v) for v in swap_vol_a_raw]
 volume_b = [wei_to_decimal(v) for v in swap_vol_b_raw]
-ratios = [scaled_to_decimal(r) for r in reserve_ratios_raw]
-prices = [scaled_to_decimal(p) for p in spot_prices_a_raw]
 
-# Process slippage
-slippages_percent = [slippage_to_percent(s) for s in slippages_raw]
+# Calculate TVL using formula: 2 * totalValuesLockedA
+total_value_locked = [2 * r for r in reserves_a]
+
+# Spot prices B per A instead of reserve ratio
+prices_b = [scaled_to_decimal(p) for p in spot_prices_b_raw]
+
+# Process slippage without taking absolute value
+slippages_percent = [slippage_to_decimal(s) for s in slippages_raw]
 slippage_time_axis = [i for i, s in enumerate(slippages_percent) if s is not None]
 slippage_values = [s for s in slippages_percent if s is not None]
 
@@ -85,21 +88,22 @@ slippage_values = [s for s in slippages_percent if s is not None]
 fees_a = [wei_to_decimal(f) for f in feeDataA_raw]
 fees_b = [wei_to_decimal(f) for f in feeDataB_raw]
 
-# Process LP Distribution Data
+# Process LP Distribution Data for only 5 LPs
 try:
     lp_distribution = np.array([[wei_to_decimal(bal) for bal in snapshot] 
                                 for snapshot in lpDistributionData_raw], dtype=Decimal)
-    # Ensure consistent number of users across snapshots if no errors occurred
+    
+    # Check if LP distribution data is available
     if len(lpDistributionData_raw) > 0:
-        num_users = lp_distribution.shape[1]
-        print(f"Processed LP distribution data for {num_users} users across {len(lp_distribution)} snapshots.")
+        num_lps = lp_distribution.shape[1]  # Should be 5 LPs
+        print(f"Processed LP distribution data for {num_lps} LPs across {len(lp_distribution)} snapshots.")
     else:
-        num_users = 0
+        num_lps = 0
         print("LP distribution data is empty.")
 except Exception as e:
     print(f"Error processing LP Distribution data: {e}")
-    print("Setting num_users to 0.")
-    num_users = 0
+    print("Setting num_lps to 0.")
+    num_lps = 0
     lp_distribution = np.array([[]], dtype=Decimal)
 
 print("Data processed successfully.")
@@ -109,22 +113,21 @@ print("Generating plots...")
 plt.style.use('seaborn-v0_8-darkgrid')
 plt.figure(figsize=(15, 18))
 
-# Plot 1: Reserves (TVL Proxy)
+# Plot 1: Total Value Locked (2 * totalValuesLockedA)
 plt.subplot(3, 2, 1)
-plt.plot(time_axis, reserves_a, label='Token A Reserve', color='blue')
-plt.plot(time_axis, reserves_b, label='Token B Reserve', color='red')
+plt.plot(time_axis, total_value_locked, label='Total Value Locked (2 × Token A)', color='blue')
 plt.xlabel('Transaction Index')
-plt.ylabel('Reserve Amount')
-plt.title('Token Reserves Over Time')
+plt.ylabel('Value')
+plt.title('Total Value Locked Over Time')
 plt.legend()
 plt.grid(True)
 
-# Plot 2: Reserve Ratio / Spot Price A
+# Plot 2: Spot Price B (A per B) - using spotPricesB
 plt.subplot(3, 2, 2)
-plt.plot(time_axis, ratios, label='Reserve Ratio (B per A)', color='green')
+plt.plot(time_axis, prices_b, label='Spot Price (A per B)', color='green')
 plt.xlabel('Transaction Index')
-plt.ylabel('Ratio / Price (B per A)')
-plt.title('Reserve Ratio / Spot Price (Token A in terms of B)')
+plt.ylabel('Price (A per B)')
+plt.title('Spot Price (Token A in terms of B)')
 plt.legend()
 plt.grid(True)
 
@@ -138,7 +141,7 @@ plt.title('Cumulative Swap Volume (Tokens Swapped IN)')
 plt.legend()
 plt.grid(True)
 
-# Plot 4: Slippage on Swaps
+# Plot 4: Slippage on Swaps (without absolute value)
 plt.subplot(3, 2, 4)
 if slippage_time_axis:
     # Convert Decimal slippage values to float for plotting markers
@@ -149,14 +152,15 @@ if slippage_time_axis:
     plt.title('Slippage per Swap Transaction')
     plt.legend()
     plt.grid(True)
+    # Add a horizontal line at y=0 to show positive/negative boundary
+    plt.axhline(y=0, color='black', linestyle='--', alpha=0.3)
 else:
     plt.text(0.5, 0.5, 'No valid slippage data recorded', horizontalalignment='center', verticalalignment='center')
     plt.title('Slippage per Swap Transaction')
 
-
-# <<< MODIFIED Plot 5: Fee Accumulation >>>
+# Plot 5: Fee Accumulation
 plt.subplot(3, 2, 5)
-plt.plot(time_axis, fees_a, label='Cumulative Fees (Token A)', color='cyan')
+plt.plot(time_axis, fees_a, label='Cumulative Fees (Token A)', color='darkblue')
 plt.plot(time_axis, fees_b, label='Cumulative Fees (Token B)', color='orange')
 plt.xlabel('Transaction Index')
 plt.ylabel('Cumulative Fees')
@@ -164,30 +168,30 @@ plt.title('Cumulative Fee Accumulation')
 plt.legend()
 plt.grid(True)
 
-# <<< MODIFIED Plot 6: LP Token Distribution (Stacked Area) >>>
+# Plot 6: LP Token Distribution (Line plot instead of stackplot for 5 LPs)
 plt.subplot(3, 2, 6)
-if num_users > 0 and lp_distribution.shape[0] == n_points: # Check if data is valid
-    # Prepare data for stackplot (transpose needed: shape should be users x time)
-    # Convert Decimal to float for stackplot compatibility
-    lp_data_for_stack = lp_distribution.T.astype(float)
-    # Generate labels for users
-    user_labels = [f'User {i+1}' for i in range(num_users)]
-    plt.stackplot(time_axis, lp_data_for_stack, labels=user_labels, alpha=0.8)
+if num_lps > 0 and lp_distribution.shape[0] == n_points:
+    # Prepare data for line plot
+    lp_data = lp_distribution.astype(float)  # Convert from Decimal to float for plotting
+    
+    # Generate labels for LPs
+    lp_labels = [f'LP {i+1}' for i in range(num_lps)]
+    
+    # Plot line for each LP
+    for i in range(num_lps):
+        plt.plot(time_axis, lp_data[:, i], label=lp_labels[i])
+    
     plt.xlabel('Transaction Index')
     plt.ylabel('LP Token Holdings')
     plt.title('LP Token Distribution Over Time')
-    # Adjust legend for clarity if many users
-    if num_users <= 10:
-        plt.legend(loc='upper left', fontsize='small')
-    else:
-         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='small')
+    plt.legend(loc='upper left', fontsize='small')
     plt.grid(True)
 else:
-     plt.text(0.5, 0.5, 'LP Distribution data not available or inconsistent',
-             horizontalalignment='center', verticalalignment='center', fontsize=9)
-     plt.title('LP Token Distribution Over Time')
-     plt.xticks([])
-     plt.yticks([])
+    plt.text(0.5, 0.5, 'LP Distribution data not available or inconsistent',
+            horizontalalignment='center', verticalalignment='center', fontsize=9)
+    plt.title('LP Token Distribution Over Time')
+    plt.xticks([])
+    plt.yticks([])
 
 # Adjust layout
 plt.tight_layout(pad=3.0)
@@ -207,8 +211,7 @@ try:
 except Exception as e:
     print(f"Error saving combined plot: {e}")
 
-
-# --- 4. Save Individual Plots (Optional but Recommended) ---
+# --- 4. Save Individual Plots ---
 
 def save_individual_plot(plot_func, title_short):
     """Helper to create and save individual plots."""
@@ -226,14 +229,13 @@ def save_individual_plot(plot_func, title_short):
         plt.close() # Close figure even if saving failed
 
 # Define plotting functions for individual saving
-def plot_reserves():
-    plt.plot(time_axis, reserves_a, label='Token A Reserve', color='blue')
-    plt.plot(time_axis, reserves_b, label='Token B Reserve', color='red')
-    plt.xlabel('Transaction Index'); plt.ylabel('Reserve Amount'); plt.title('Token Reserves Over Time'); plt.legend(); plt.grid(True)
+def plot_tvl():
+    plt.plot(time_axis, total_value_locked, label='Total Value Locked (2 × Token A)', color='blue')
+    plt.xlabel('Transaction Index'); plt.ylabel('Value'); plt.title('Total Value Locked Over Time'); plt.legend(); plt.grid(True)
 
-def plot_ratio_price():
-    plt.plot(time_axis, ratios, label='Reserve Ratio (B per A)', color='green')
-    plt.xlabel('Transaction Index'); plt.ylabel('Ratio / Price (B per A)'); plt.title('Reserve Ratio / Spot Price'); plt.legend(); plt.grid(True)
+def plot_spot_price():
+    plt.plot(time_axis, prices_b, label='Spot Price (A per B)', color='green')
+    plt.xlabel('Transaction Index'); plt.ylabel('Price (A per B)'); plt.title('Spot Price (A per B)'); plt.legend(); plt.grid(True)
 
 def plot_volume():
     plt.plot(time_axis, volume_a, label='Cumulative Vol A Swapped IN', color='purple')
@@ -243,30 +245,31 @@ def plot_volume():
 def plot_slippage():
     if slippage_time_axis:
         plt.plot(slippage_time_axis, [float(s) for s in slippage_values], label='Slippage %', marker='o', markersize=4, linestyle='None', color='magenta')
+        plt.axhline(y=0, color='black', linestyle='--', alpha=0.3)  # Zero line
         plt.xlabel('Transaction Index of Swap'); plt.ylabel('Slippage (%)'); plt.title('Slippage per Swap'); plt.legend(); plt.grid(True)
     else:
         plt.text(0.5, 0.5, 'No valid slippage data', ha='center', va='center'); plt.title('Slippage per Swap')
 
 def plot_fees():
-    plt.plot(time_axis, fees_a, label='Cumulative Fees (Token A)', color='cyan')
+    plt.plot(time_axis, fees_a, label='Cumulative Fees (Token A)', color='darkblue')
     plt.plot(time_axis, fees_b, label='Cumulative Fees (Token B)', color='orange')
     plt.xlabel('Transaction Index'); plt.ylabel('Cumulative Fees'); plt.title('Cumulative Fee Accumulation'); plt.legend(); plt.grid(True)
 
 def plot_lp_distribution():
-    if num_users > 0 and lp_distribution.shape[0] == n_points:
-        lp_data_for_stack = lp_distribution.T.astype(float)
-        user_labels = [f'User {i+1}' for i in range(num_users)]
-        plt.stackplot(time_axis, lp_data_for_stack, labels=user_labels, alpha=0.8)
+    if num_lps > 0 and lp_distribution.shape[0] == n_points:
+        lp_data = lp_distribution.astype(float)
+        lp_labels = [f'LP {i+1}' for i in range(num_lps)]
+        for i in range(num_lps):
+            plt.plot(time_axis, lp_data[:, i], label=lp_labels[i])
         plt.xlabel('Transaction Index'); plt.ylabel('LP Token Holdings'); plt.title('LP Token Distribution Over Time');
-        if num_users <= 10: plt.legend(loc='upper left', fontsize='small')
-        else: plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='small')
+        plt.legend(loc='upper left', fontsize='small')
         plt.grid(True)
     else:
-        plt.text(0.5, 0.5, 'LP Distribution data not available/inconsistent', ha='center', va='center'); plt.title('LP Token Distribution')
+        plt.text(0.5, 0.5, 'LP Distribution data not available', ha='center', va='center'); plt.title('LP Token Distribution')
 
 # Save individual plots by calling the helper
-save_individual_plot(plot_reserves, "reserves")
-save_individual_plot(plot_ratio_price, "reserve_ratio_spot_price")
+save_individual_plot(plot_tvl, "total_value_locked")
+save_individual_plot(plot_spot_price, "spot_price_a_per_b")
 save_individual_plot(plot_volume, "swap_volume")
 save_individual_plot(plot_slippage, "slippage")
 save_individual_plot(plot_fees, "fee_accumulation")
