@@ -198,7 +198,7 @@ The following key metrics were tracked and data was logged for plotting against 
     \item \textbf{Token Reserves (TVL (Total Value Locked)):} The amounts of Token A and Token B held by the DEX contract over time.
     \item \textbf{Reserve Ratio / Spot Price:} The ratio reserveB / reserveA, representing the spot price of Token A in terms of Token B.
     \item \textbf{Swap Volume:} The cumulative amount of Token A and Token B swapped into the DEX.
-    \item \textbf{Slippage:} The percentage difference between the expected price (reserve ratio before swap) and the actual execution price for each swap transaction, calculated using the formula provided.
+    \item \textbf{Slippage:} The percentage difference between the expected price (reserve ratio before swap) and the actual execution price for each swap transaction, calculated using the formula provided. We have plotted absolute values of slippage for clarity.
     \item \textbf{Fee Accumulation:} The cumulative fees collected in Token A and Token B, calculated based on the 0.3\% fee per swap.
     \item \textbf{LP Token Distribution:} A snapshot of each simulated user's LP token balance after every transaction, visualized as a stacked area chart to show distribution over time.
 \end{enumerate}
@@ -226,7 +226,7 @@ The following key metrics were tracked and data was logged for plotting against 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../task2_plots/slippage.png}
-    \caption{Plot of Slippage per Swap vs. Transaction Index}
+    \caption{Plot of absolute value of Slippage per Swap vs. Transaction Index}
     \label{fig:slippage}
 \end{figure}
 
@@ -287,29 +287,29 @@ However, resourceful traders still have advantages in DeFi through concepts like
 \subsection{Q3: Miner Advantage (MEV)}
 \textbf{Question:} Suppose there are many transaction requests to the DEX sitting in a miner's mempool. How can the miner take undue advantage of this information? Is it possible to make the DEX robust against it?
 
-\textbf{Answer:} Miners (or validators in Proof-of-Stake) have visibility into the pool of pending transactions (mempool) before they are included in a block. They also typically have the power to arbitrarily order (and sometimes insert/censor) transactions within the block they produce. This creates opportunities for Miner Extractable Value (MEV) that exploit DEX users:
+\textbf{Answer:} Miners have visibility into the pool of pending transactions (mempool) before they are included in a block. They also have the power to arbitrarily order transactions within the block they produce. This gives the miners opportunities for Miner Extractable Value (MEV) that exploit DEX users:
 \begin{itemize}
-    \item \textbf{Front-running:} A miner sees a large user swap incoming (e.g., buying Token B with Token A) that will increase the price of Token B. The miner inserts their own transaction just before the user's swap to buy Token B at the lower price. After the user's large swap pushes the price up, the miner inserts another transaction to sell their Token B at the new, higher price, capturing a risk-free profit.
+    \item \textbf{Front-running:} A miner sees a large user swap incoming (e.g., buying Token B with Token A) that will increase the price of Token B. The miner inserts their own transaction just before the user's swap to buy Token B at the lower price. After the user's large swap pushes the price up, the miner can insert another transaction to sell their Token B at the new, higher price, capturing a risk-free profit.
     \item \textbf{Back-running:} A miner sees a transaction that creates an arbitrage opportunity (e.g., adding liquidity that significantly changes the price relative to another DEX). They execute the user's transaction and immediately insert their own transaction after it to capture the arbitrage profit before anyone else can.
-    \item \textbf{Sandwich Attack:} A combination where the miner places a buy order just before the user's buy order (front-running) and a sell order just after it, profiting from the price impact caused by the user's trade.
+    \item \textbf{Sandwich Attack:} A combination where the miner places a buy order just before the user's buy order (front-running) and a sell order just after it (back-running), profiting from the price impact caused by the user's trade.
 \end{itemize}
-Making a DEX completely robust against MEV is extremely difficult, as miners fundamentally control block production. However, strategies exist to mitigate it:
+To make a DEX completely robust against MEV is extremely difficult, as miners fundamentally control block production. However, strategies exist to mitigate it:
 \begin{itemize}
     \item \textbf{Slippage Tolerance:} Users setting tight slippage tolerances on their swaps can limit the potential profit from sandwich attacks, causing the second leg of the attack to fail.
-    \item \textbf{Batch Auctions/Order Matching:} Some DEX designs move away from instant AMM execution and use batch auctions (collecting orders over a short period and settling them at a uniform clearing price) which makes front-running harder.
-    \item \textbf{MEV-aware Protocols/Relays:} Services like Flashbots allow users to submit transactions privately to miners, bypassing the public mempool. Miners participating in these systems can execute bundles atomically, potentially preventing front-running by others but still allowing the miner to capture MEV internally or through auctions.
+    \item \textbf{Batch Auctions:} Some DEX designs move away from instant AMM execution and use batch auctions (collecting orders over a short period and settling them at a uniform clearing price) which makes front-running harder.
+    \item \textbf{MEV-aware Protocols:} Services like Flashbots allow users to submit transactions privately to miners, bypassing the public mempool. Miners participating in these systems can execute bundles atomically, potentially preventing front-running by others but still allowing the miner to capture MEV internally or through auctions.
     \item \textbf{Encrypted Mempools:} Future solutions involve encrypting transactions in the mempool so miners cannot see the content until after the block order is committed.
 \end{itemize}
-The simple AMM in this assignment is vulnerable to these MEV strategies.
+Our simple AMM in this assignment is vulnerable to these MEV strategies.
 
 \subsection{Q4: Gas Fees Influence}
 \textbf{Question:} We have left out a very important dimension on the feasibility of this smart contract the gas fees! Every function call needs gas. How does gas fees influence economic viability of the entire DEX and arbitrage?
 
 \textbf{Answer:} Gas fees are a critical factor in the economic viability of DEXs and arbitrage:
 \begin{itemize}
-    \item \textbf{DEX Viability (User Perspective):} High gas fees can make swapping small amounts uneconomical. If the gas cost for a swap transaction (which can be significant due to complex AMM calculations and storage updates) is a large percentage of the trade value, users are deterred. This particularly affects smaller retail traders. DEXs on Layer 1 blockchains with high gas fees (like Ethereum mainnet during congestion) become less attractive compared to CEXs or DEXs on cheaper Layer 2 solutions.
+    \item \textbf{DEX Viability (User Perspective):} High gas fees can make swapping small amounts uneconomical. If the gas cost for a swap transaction is a large percentage of the trade value, users will be hesitant. This particularly affects smaller retail traders. DEXs on Layer 1 blockchains with high gas fees (like Ethereum mainnet during congestion) become less attractive compared to CEXs or DEXs on cheaper Layer 2 solutions.
     \item \textbf{DEX Viability (LP Perspective):} Adding or removing liquidity also costs gas. LPs need to earn enough in trading fees (the 0.3\% in this case) over time to cover the gas costs of their deposit and withdrawal transactions, plus compensate for impermanent loss risk, to be profitable. High gas fees reduce LP profitability, potentially leading to lower liquidity.
-    \item \textbf{Arbitrage Viability:} Arbitrage opportunities often involve small price discrepancies. An arbitrage bot must calculate if the potential profit from exploiting a price difference across two DEXs is greater than the combined gas cost of executing the necessary transactions (at least two swaps, plus approvals if needed). During high gas periods, many small arbitrage opportunities become unprofitable, allowing price discrepancies between venues to persist for longer. Arbitrage bots often compete by using sophisticated gas price strategies to ensure execution while minimizing cost.
+    \item \textbf{Arbitrage Viability:} Arbitrage opportunities often involve small price discrepancies. An arbitrage bot must calculate if the potential profit from exploiting a price difference across two DEXs is greater than the combined gas cost of executing the necessary transactions (at least two swaps, plus approvals if needed). During high gas periods, many small arbitrage opportunities become unprofitable, allowing price discrepancies between venues to persist for longer. Arbitrage bots have to compete by using sophisticated gas price strategies to ensure execution while minimizing cost.
 \end{itemize}
 
 \subsection{Q5: Gas Fee Advantages}
@@ -317,27 +317,26 @@ The simple AMM in this assignment is vulnerable to these MEV strategies.
 
 \textbf{Answer:} Yes, gas fees can definitely create advantages, primarily favoring those with more capital or sophisticated infrastructure:
 \begin{itemize}
-    \item \textbf{Priority Gas Auctions (PGAs):} When network congestion is high, users compete for block space by bidding higher gas prices. Wealthy traders or bots (like front-runners or arbitrageurs) can afford to pay significantly higher gas prices to ensure their transactions are processed faster and included before others. This allows them to consistently capture time-sensitive opportunities (like arbitrage or front-running) before retail users whose transactions might be stuck pending due to lower gas prices.
-    \item \textbf{Transaction Ordering:} Miners/validators are incentivized to include transactions with higher gas prices first. This gives an advantage to those who can pay more for priority, effectively allowing them to ```cut in line" in the mempool.
+    \item \textbf{Priority Gas Auctions (PGAs):} When network congestion is high, users compete for block space by bidding higher gas prices. Wealthy traders or bots (like front-runners or arbitrageurs) can afford to pay significantly higher gas prices to ensure their transactions are processed faster and included before others. This allows them to consistently capture time-sensitive opportunities (like arbitrage or front-running) before retail users whose transactions might get stuck due to lower gas prices.
+    \item \textbf{Transaction Ordering:} Miners/validators are incentivized to include transactions with higher gas prices first. This gives an advantage to those who can pay more for priority, effectively allowing them to cut in line in the mempool.
     \item \textbf{Economic Exclusion:} As mentioned in Q4, high base gas fees can simply make certain actions (small swaps, frequent LP adjustments) economically infeasible for users with limited capital, while remaining viable for larger players. This restricts participation for smaller users.
     \item \textbf{MEV Exploitation:} Actors specifically searching for MEV opportunities are often willing to pay very high gas fees (sometimes even exceeding the direct arbitrage profit, if they can chain MEV opportunities) to guarantee execution and front-run others.
 \end{itemize}
 
 \subsection{Q6: Minimizing Slippage}
-\textbf{Question:} What are the various ways to minimize slippage (as defined in 4.2) in a swap? [cite: 69]
+\textbf{Question:} What are the various ways to minimize slippage in a swap?
 
 \textbf{Answer:} Slippage in an AMM swap is the difference between the expected price (based on reserves before the swap) and the actual execution price (based on the reserves during/after the swap). It's higher for larger trades relative to pool liquidity. Ways to minimize it include:
 \begin{itemize}
     \item \textbf{Trading Smaller Sizes:} Executing smaller individual trades has less price impact on the pool reserves, resulting in lower slippage compared to one large trade. Users can manually break down large orders (though this incurs more gas fees).
-    \item \textbf{Using High-Liquidity Pools:} Pools with larger reserves ($x$ and $y$) experience less price change for a given trade size ($\Delta x$), thus resulting in lower slippage. Trading on established DEXs with deep liquidity for the desired pair is key.
+    \item \textbf{Using High-Liquidity Pools:} Pools with larger reserves ($x$ and $y$) experience less price change for a given trade size ($\Delta x$), thus resulting in lower slippage. Trading on established DEXs with high liquidity for the desired pair of tokens is the key.
     \item \textbf{DEX Aggregators:} Services like 1inch or Matcha route trades across multiple DEXs and liquidity pools, splitting the order to find the path with the lowest overall slippage and best net execution price, often executing partial orders on different pools simultaneously.
-    \item \textbf{Trading Stable Pairs:} AMMs designed specifically for stablecoin pairs (like Curve) use different bonding curves (e.g., StableSwap invariant) that concentrate liquidity around the target peg (usually \$1.00), allowing very large trades with minimal slippage as long as the price stays near the peg.
-    \item \textbf{Limit Orders (on specific DEXs):} Some DEXs (often using limit order book mechanisms alongside or instead of AMMs, like Serum or dYdX, or protocols like Uniswap v3 with concentrated liquidity ranges) allow users to place limit orders that only execute at a specified price or better, effectively providing zero slippage if the order fills at the desired price. The AMM implemented in this assignment does not support limit orders.
+    \item \textbf{Limit Orders (on specific DEXs):} Some DEXs (often using limit order book mechanisms alongside or instead of AMMs, like Serum or dYdX, or protocols like Uniswap v3 with concentrated liquidity ranges) allow users to place limit orders that only execute at a specified price or better, effectively providing zero slippage if the order fills at the desired price.
     \item \textbf{Setting Slippage Tolerance:} While this doesn't reduce the slippage inherent in the trade itself, setting a tight slippage tolerance in the user interface prevents the transaction from executing if the actual price moves beyond an acceptable percentage from the expected price (e.g., due to front-running or other simultaneous trades), thus protecting the user from unexpectedly high slippage.
 \end{itemize}
 
 \subsection{Q7: Slippage vs. Trade Lot Fraction Plot}
-\textbf{Question:} Having defined what slippage, plot how slippage varies with the ``trade lot fraction" for a constant product AMM? Trade lot fraction is the ratio of the amount of token X deposited in a swap, to the amount of X in the reserves just before the swap. [cite: 70, 71]
+\textbf{Question:} Having defined what slippage, plot how slippage varies with the ``trade lot fraction" for a constant product AMM? Trade lot fraction is the ratio of the amount of token X deposited in a swap, to the amount of X in the reserves just before the swap.
 
 \textbf{Answer:} We need to analyze the relationship between slippage ($S$) and the trade lot fraction ($f = \frac{\Delta x}{x}$), where $\Delta x$ is the amount of token X deposited, and $x$ is the reserve of token X before the swap. Let $y$ be the reserve of token Y. The constant product is $k = x \times y$.
 
@@ -352,38 +351,36 @@ Where:
     \item Actual Price (Y per X) = $\frac{\Delta y}{\Delta x} = \frac{y \times (\frac{\Delta x}{x + \Delta x})}{\Delta x} = \frac{y}{x + \Delta x}$
 \end{itemize}
 So,
-$S = \left| \frac{y / (x + \Delta x)}{y / x} - 1 \right| \times 100\% = \left| \frac{x}{x + \Delta x} - 1 \right| \times 100\% = \left| \frac{-\Delta x}{x + \Delta x} \right| \times 100\%$
-$S = \frac{\Delta x}{x + \Delta x} \times 100\%$
+$S = \left| \frac{y / (x + \Delta x)}{y / x} - 1 \right| \times 100\% = \left| \frac{x}{x + \Delta x} - 1 \right| \times 100\% = \left| \frac{-\Delta x}{x + \Delta x} \right| \times 100\% = \frac{\Delta x}{x + \Delta x} \times 100\%$
 
-Now substitute the trade lot fraction $f = \frac{\Delta x}{x}$, which means $\Delta x = f \times x$.
+Now substitute the trade lot fraction $f = \frac{\Delta x}{x}$, which means $\Delta x = f \times x$.\\
 $S(f) = \frac{f \times x}{x + f \times x} \times 100\% = \frac{f \times x}{x(1 + f)} \times 100\% = \frac{f}{1 + f} \times 100\%$
 
-Plotting $S(f) = \frac{f}{1 + f}$:
-\begin{itemize}
-    \item The trade lot fraction $f$ ranges from 0 (no trade) to potentially very large numbers (though practically limited).
-    \item When $f = 0$, $S(0) = 0$. Zero trade means zero slippage.
-    \item As $f$ increases from 0, the denominator $(1+f)$ increases slightly slower than the numerator $f$. The slippage $S(f)$ increases.
-    \item As $f \to \infty$ (meaning the trade size $\Delta x$ becomes infinitely large compared to the reserve $x$), the slippage $S(f) = \frac{f}{1+f}$ approaches 1 (or 100\%). This makes sense, as an infinitely large trade would drain almost all of the other token, resulting in an execution price vastly different from the initial spot price.
-    \item The relationship is non-linear. The slope is steepest near $f=0$ and flattens out as $f$ increases. This means slippage increases rapidly for small trade fractions but the rate of increase slows down for very large trade fractions (though it always increases).
-\end{itemize}
-
+Plot of $S(f) = \frac{f}{1 + f} \times 100\% $:
+% \begin{itemize}
+%     \item The trade lot fraction $f$ ranges from 0 (no trade) to potentially very large numbers (though practically limited).
+%     \item When $f = 0$, $S(0) = 0$. Zero trade means zero slippage.
+%     \item As $f$ increases from 0, the denominator $(1+f)$ increases slightly slower than the numerator $f$. The slippage $S(f)$ increases.
+%     \item As $f \to \infty$ (meaning the trade size $\Delta x$ becomes infinitely large compared to the reserve $x$), the slippage $S(f) = \frac{f}{1+f}$ approaches 1 (or 100\%). This makes sense, as an infinitely large trade would drain almost all of the other token, resulting in an execution price vastly different from the initial spot price.
+%     \item The relationship is non-linear. The slope is steepest near $f=0$ and flattens out as $f$ increases. This means slippage increases rapidly for small trade fractions but the rate of increase slows down for very large trade fractions (though it always increases).
+% \end{itemize}
 \begin{figure}[H]
     \centering
     \begin{tikzpicture}
         \begin{axis}[
             xlabel={Trade Lot Fraction ($f$)},
             ylabel={Slippage (\%)},
-            xmin=0, xmax=10,
+            xmin=0, xmax=20,
             ymin=0, ymax=100,
             grid=major,
-            width=0.8\textwidth,
+            width=0.9\textwidth,
             height=0.5\textwidth,
             legend pos=north west,
             title={Slippage vs. Trade Lot Fraction}
         ]
         \addplot[
-            domain=0:10,
-            samples=100,
+            domain=0:20,
+            samples=200,
             thick,
             blue
         ]
