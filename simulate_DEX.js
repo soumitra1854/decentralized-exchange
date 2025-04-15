@@ -8,10 +8,10 @@ async function simulateDEX() {
         const TOTAL_USERS = NUM_LPS + NUM_TRADERS;
 
         // --- deployed contract addresses ---
-        const TOKEN_A_ADDRESS = "0xDA0bab807633f07f013f94DD0E6A4F96F8742B53";
-        const TOKEN_B_ADDRESS = "0x358AA13c52544ECCEF6B0ADD0f801012ADAD5eE3";
-        const LP_TOKEN_ADDRESS = "0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99";
-        const DEX_ADDRESS = "0xd2a5bC10698FD955D1Fe6cb468a17809A08fd005";
+        const TOKEN_A_ADDRESS = "0x838F9b8228a5C95a7c431bcDAb58E289f5D2A4DC";
+        const TOKEN_B_ADDRESS = "0x9a2E12340354d2532b4247da3704D2A5d73Bd189";
+        const LP_TOKEN_ADDRESS = "0x3c725134d74D5c45B4E4ABd2e5e2a109b5541288";
+        const DEX_ADDRESS = "0xDA07165D4f7c84EEEfa7a4Ff439e039B7925d3dF";
 
         // ABIs paths
         console.log("Fetching ABIs...");
