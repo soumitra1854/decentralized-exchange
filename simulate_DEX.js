@@ -30,7 +30,9 @@ async function simulateDEX() {
             throw new Error(`Need at least ${TOTAL_USERS + 1} accounts in Remix VM.`);
         }
         const deployer = accounts[0];
-        const users = accounts.slice(1, TOTAL_USERS + 1);
+        const lpUsers = accounts.slice(1, NUM_LPS + 1);
+        const traderUsers = accounts.slice(NUM_LPS + 1, TOTAL_USERS + 1);
+        const users = [...lpUsers, ...traderUsers];
         console.log(`${users.length} user accounts obtained.`);
 
         console.log("Instantiating contracts...");
@@ -108,8 +110,7 @@ async function simulateDEX() {
 
         // --- Data Storage for Plotting ---
         let timestamps = [];
-        let reserveRatios = [];
-        let spotPricesA = [];
+        let spotPricesB = [];
         let totalValuesLockedA = [];
         let totalValuesLockedB = [];
         let swapVolumesA = [];
@@ -150,7 +151,7 @@ async function simulateDEX() {
 
                 if (actionType < 0.35 && !reserveA_BN.isZero()) { // Add Liquidity
                     console.log("Action: Add Liquidity");
-                    if (userBalanceA_BN.isZero()) { console.log("User has no Token A. Skipping."); slippages.push(null); continue; } 
+                    if (userBalanceA_BN.isZero()) { console.log("User has no Token A. Skipping."); slippages.push(null); continue; }
                     const amountADesired = userBalanceA_BN.mul(web3.utils.toBN(Math.floor(Math.random() * 20) + 1)).div(web3.utils.toBN(100));
                     const amountBDesired = amountADesired.mul(reserveB_BN).div(reserveA_BN).add(web3.utils.toBN(1));
                     if (userBalanceB_BN.lt(amountBDesired)) { console.log("User has insufficient Token B for ratio. Skipping."); slippages.push(null); continue; }
@@ -199,11 +200,11 @@ async function simulateDEX() {
                         const swapEvent = receipt.events.Swap;
                         if (swapEvent) {
                             const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut);
-                            if (amountInActualBN.isZero()) { 
-                                slippages.push('0'); 
+                            if (amountInActualBN.isZero()) {
+                                slippages.push('0');
                             } else {
                                 const actualPrice = amountOutActual.mul(web3.utils.toBN(1e18)).div(amountInActualBN); // B per A
-                                const slippage = expectedPriceA.isZero() ? web3.utils.toBN(0) : expectedPriceA.sub(actualPrice).abs().mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceA);
+                                const slippage = expectedPriceA.isZero() ? web3.utils.toBN(0) : actualPrice.sub(expectedPriceA).mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceA);
                                 slippages.push(slippage.toString());
                                 console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18)) / 100}%`);
                             }
@@ -237,12 +238,12 @@ async function simulateDEX() {
                         const swapEvent = receipt.events.Swap;
                         if (swapEvent) {
                             const amountOutActual = web3.utils.toBN(swapEvent.returnValues.amountOut);
-                            if (amountOutActual.isZero()) { 
+                            if (amountOutActual.isZero()) {
                                 slippages.push('0');
                             } else {
                                 const actualPrice = amountInActualBN.mul(web3.utils.toBN(1e18)).div(amountOutActual); // Price B per A
                                 const expectedPriceBperA = reserveA_BN.isZero() ? web3.utils.toBN(0) : reserveB_BN.mul(web3.utils.toBN(1e18)).div(reserveA_BN); // Price B per A
-                                const slippage = expectedPriceBperA.isZero() ? web3.utils.toBN(0) : expectedPriceBperA.sub(actualPrice).abs().mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceBperA);
+                                const slippage = expectedPriceBperA.isZero() ? web3.utils.toBN(0) : actualPrice.sub(expectedPriceBperA).mul(web3.utils.toBN(100 * 1e18)).div(expectedPriceBperA);
                                 slippages.push(slippage.toString());
                                 console.log(`Slippage: ${slippage.mul(web3.utils.toBN(100)).div(web3.utils.toBN(1e18)) / 100}%`);
                             }
@@ -264,16 +265,15 @@ async function simulateDEX() {
                 timestamps.push(currentTimestamp);
                 totalValuesLockedA.push(currentReserveA.toString());
                 totalValuesLockedB.push(currentReserveB.toString());
-                reserveRatios.push(currentReserveA.isZero() ? '0' : currentReserveB.mul(web3.utils.toBN(1e18)).div(currentReserveA).toString());
-                spotPricesA.push(currentReserveA.isZero() ? '0' : currentReserveB.mul(web3.utils.toBN(1e18)).div(currentReserveA).toString());
+                spotPricesB.push(currentReserveB.isZero() ? '0' : currentReserveA.mul(web3.utils.toBN(1e18)).div(currentReserveB).toString());
                 swapVolumesA.push(cumulativeVolSwappedInA.toString());
                 swapVolumesB.push(cumulativeVolSwappedInB.toString());
 
                 feeDataA.push(cumulativeFeesA.toString());
                 feeDataB.push(cumulativeFeesB.toString());
                 let currentLPDistribution = [];
-                for (const user of users) {
-                    const bal = await lpToken.methods.balanceOf(user).call();
+                for (const lpUser of lpUsers) {
+                    const bal = await lpToken.methods.balanceOf(lpUser).call();
                     currentLPDistribution.push(bal.toString());
                 }
                 lpDistributionData.push(currentLPDistribution);
@@ -284,7 +284,7 @@ async function simulateDEX() {
                 slippages.push(null);
                 feeDataA.push(cumulativeFeesA.toString());
                 feeDataB.push(cumulativeFeesB.toString());
-                lpDistributionData.push(Array(users.length).fill(null));
+                lpDistributionData.push(Array(lpUsers.length).fill(null));
                 await new Promise(resolve => setTimeout(resolve, 100));
                 continue;
             }
@@ -299,8 +299,7 @@ async function simulateDEX() {
         // --- Log Data for Plotting ---
         console.log("\n--- Data for Plotting ---");
         console.log("Timestamps:", JSON.stringify(timestamps));
-        console.log("ReserveRatios (B per A * 1e18):", JSON.stringify(reserveRatios));
-        console.log("SpotPricesA (B per A * 1e18):", JSON.stringify(spotPricesA));
+        console.log("SpotPricesB (A per B * 1e18):", JSON.stringify(spotPricesB));
         console.log("TotalValueLockedA:", JSON.stringify(totalValuesLockedA));
         console.log("TotalValueLockedB:", JSON.stringify(totalValuesLockedB));
         console.log("CumulativeSwapVolumeA_IN:", JSON.stringify(swapVolumesA));
@@ -316,16 +315,15 @@ async function simulateDEX() {
         }
         const simulationData = {
             timestamps: timestamps,
-            reserveRatios: reserveRatios,
-            spotPricesA: spotPricesA,
             totalValuesLockedA: totalValuesLockedA,
             totalValuesLockedB: totalValuesLockedB,
+            spotPricesB: spotPricesB,
+            lpDistributionSnapshots: lpDistributionData,
             cumulativeSwapVolumeA: swapVolumesA,
             cumulativeSwapVolumeB: swapVolumesB,
-            slippages: slippages,
             cumulativeFeesA: feeDataA,
             cumulativeFeesB: feeDataB,
-            lpDistributionSnapshots: lpDistributionData
+            slippages: slippages
         };
         await remix.call('fileManager', 'writeFile', 'browser/simulation_data.json', JSON.stringify(simulationData, null, 2));
         console.log("Simulation data saved to browser/simulation_data.json");

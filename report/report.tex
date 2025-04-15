@@ -195,12 +195,12 @@ A Javascript script (\texttt{simulate\_DEX.js}) was implemented to test the DEX 
 The simulation (\texttt{simulate\_DEX.js}) was run successfully after compilation and deployment of the contracts and setting the addresses of ABIs and deployed contracts. The script executed various swap, add liquidity, and remove liquidity transactions initiated by different users.
 The following key metrics were tracked and data was logged for plotting against transaction index/time:
 \begin{enumerate}
-    \item \textbf{Token Reserves (TVL (Total Value Locked)):} The amounts of Token A and Token B held by the DEX contract over time.
-    \item \textbf{Reserve Ratio / Spot Price:} The ratio reserveB / reserveA, representing the spot price of Token A in terms of Token B.
-    \item \textbf{Swap Volume:} The cumulative amount of Token A and Token B swapped into the DEX.
-    \item \textbf{Slippage:} The percentage difference between the expected price (reserve ratio before swap) and the actual execution price for each swap transaction, calculated using the formula provided. We have plotted absolute values of slippage for clarity.
-    \item \textbf{Fee Accumulation:} The cumulative fees collected in Token A and Token B, calculated based on the 0.3\% fee per swap.
+    \item \textbf{TVL (Total Value Locked):} The total amounts of Token A and Token B held by the DEX contract over time. \(TVL = Reserves_A + Reserves_B \cdot \frac{Reserves_A}{Reserves_B} = 2 \cdot Reserves_A\) Here we are assuming \(Reserves_A\) as USD.
+    \item \textbf{Reserve Ratio / Spot Price:} The ratio reserveA / reserveB, representing the spot price of Token B in terms of Token A.
     \item \textbf{LP Token Distribution:} A snapshot of each simulated user's LP token balance after every transaction, visualized as a stacked area chart to show distribution over time.
+    \item \textbf{Swap Volume:} The cumulative amount of Token A and Token B swapped into the DEX.
+    \item \textbf{Fee Accumulation:} The cumulative fees collected in Token A and Token B, calculated based on the 0.3\% fee per swap.
+    \item \textbf{Slippage:} The percentage difference between the actual execution price for each swap transaction and the expected price (reserve ratio before swap), calculated using the formula provided.
 \end{enumerate}
 \begin{figure}[H]
     \centering
@@ -335,59 +335,117 @@ Our simple AMM in this assignment is vulnerable to these MEV strategies.
     \item \textbf{Setting Slippage Tolerance:} While this doesn't reduce the slippage inherent in the trade itself, setting a tight slippage tolerance in the user interface prevents the transaction from executing if the actual price moves beyond an acceptable percentage from the expected price (e.g., due to front-running or other simultaneous trades), thus protecting the user from unexpectedly high slippage.
 \end{itemize}
 
+% \subsection{Q7: Slippage vs. Trade Lot Fraction Plot}
+% \textbf{Question:} Having defined what slippage, plot how slippage varies with the ``trade lot fraction" for a constant product AMM? Trade lot fraction is the ratio of the amount of token X deposited in a swap, to the amount of X in the reserves just before the swap.
+
+% \textbf{Answer:} We need to analyze the relationship between slippage ($S$) and the trade lot fraction ($f = \frac{\Delta x}{x}$), where $\Delta x$ is the amount of token X deposited, and $x$ is the reserve of token X before the swap. Let $y$ be the reserve of token Y. The constant product is $k = x \times y$.
+
+% After swapping $\Delta x$ (ignoring fees for simplicity here), the new reserve of X is $x' = x + \Delta x$. The new reserve of Y is $y'$ such that $x' \times y' = k$. So, $y' = \frac{k}{x'} = \frac{x \times y}{x + \Delta x}$.
+% The amount of Y received is $\Delta y = y - y' = y - \frac{x \times y}{x + \Delta x} = y \times (1 - \frac{x}{x + \Delta x}) = y \times (\frac{\Delta x}{x + \Delta x})$.
+
+% The slippage formula (relative difference between actual price and expected price) is:
+% $S = \left( \frac{\text{Actual Price}}{\text{Expected Price}} - 1 \right) \times 100\%$
+% Where:
+% \begin{itemize}
+%     \item Expected Price (Y per X) = $\frac{y}{x}$
+%     \item Actual Price (Y per X) = $\frac{\Delta y}{\Delta x} = \frac{y \times (\frac{\Delta x}{x + \Delta x})}{\Delta x} = \frac{y}{x + \Delta x}$
+% \end{itemize}
+% So,
+% $S = \left( \frac{y / (x + \Delta x)}{y / x} - 1 \right) \times 100\% = \left( \frac{x}{x + \Delta x} - 1 \right) \times 100\% = \left( \frac{-\Delta x}{x + \Delta x} \right) \times 100\%$
+
+% Now substitute the trade lot fraction $f = \frac{\Delta x}{x}$, which means $\Delta x = f \times x$.\\
+% $S(f) = \frac{-f \times x}{x + f \times x} \times 100\% = \frac{-f \times x}{x(1 + f)} \times 100\% = \frac{-f}{1 + f} \times 100\%$
+
+% Plot of $S(f) = \frac{-f}{1 + f} \times 100\% $:
+% \begin{figure}[H]
+%     \centering
+%     \begin{tikzpicture}
+%         \begin{axis}[
+%             xlabel={Trade Lot Fraction ($f$)},
+%             ylabel={Slippage (\%)},
+%             xmin=0, xmax=20,
+%             ymin=-100, ymax=0,
+%             grid=major,
+%             width=0.9\textwidth,
+%             height=0.5\textwidth,
+%             legend pos=north west,
+%             title={Slippage vs. Trade Lot Fraction}
+%         ]
+%         \addplot[
+%             domain=0:20,
+%             samples=200,
+%             thick,
+%             blue
+%         ]
+%         {100 * -x / (1 + x)};
+%         \end{axis}
+%     \end{tikzpicture}
+%     \caption{Plot of Slippage (\%) vs. Trade Lot Fraction ($f = \Delta x / x$)}
+%     \label{fig:slippage_fraction}
+% \end{figure}
+
 \subsection{Q7: Slippage vs. Trade Lot Fraction Plot}
 \textbf{Question:} Having defined what slippage, plot how slippage varies with the ``trade lot fraction" for a constant product AMM? Trade lot fraction is the ratio of the amount of token X deposited in a swap, to the amount of X in the reserves just before the swap.
 
 \textbf{Answer:} We need to analyze the relationship between slippage ($S$) and the trade lot fraction ($f = \frac{\Delta x}{x}$), where $\Delta x$ is the amount of token X deposited, and $x$ is the reserve of token X before the swap. Let $y$ be the reserve of token Y. The constant product is $k = x \times y$.
 
-After swapping $\Delta x$ (ignoring fees for simplicity here), the new reserve of X is $x' = x + \Delta x$. The new reserve of Y is $y'$ such that $x' \times y' = k$. So, $y' = \frac{k}{x'} = \frac{x \times y}{x + \Delta x}$.
-The amount of Y received is $\Delta y = y - y' = y - \frac{x \times y}{x + \Delta x} = y \times (1 - \frac{x}{x + \Delta x}) = y \times (\frac{\Delta x}{x + \Delta x})$.
+To incorporate the DEX's 0.3\% fee, we define:
+\begin{itemize}
+    \item Fee factor: $\gamma = 0.997$ (representing 99.7\% of the input amount after the 0.3\% fee)
+    \item Effective input amount after fee: $\gamma \cdot \Delta x$
+\end{itemize}
+
+After swapping $\Delta x$ of token X, the new reserve of X is $x' = x + \gamma \cdot \Delta x$ (after fee). The new reserve of Y is $y'$ such that $x' \times y' = k$, so $y' = \frac{k}{x'} = \frac{x \times y}{x + \gamma \cdot \Delta x}$.
+
+The amount of Y received is $\Delta y = y - y' = y - \frac{x \times y}{x + \gamma \cdot \Delta x} = y \times \frac{\gamma \cdot \Delta x}{x + \gamma \cdot \Delta x}$.
 
 The slippage formula (relative difference between actual price and expected price) is:
-$S = \left| \frac{\text{Actual Price}}{\text{Expected Price}} - 1 \right| \times 100\%$
+$S = \left( \frac{\text{Actual Price}}{\text{Expected Price}} - 1 \right) \times 100\%$
 Where:
 \begin{itemize}
     \item Expected Price (Y per X) = $\frac{y}{x}$
-    \item Actual Price (Y per X) = $\frac{\Delta y}{\Delta x} = \frac{y \times (\frac{\Delta x}{x + \Delta x})}{\Delta x} = \frac{y}{x + \Delta x}$
+    \item Actual Price (Y per X) = $\frac{\Delta y}{\Delta x} = \frac{y \times \frac{\gamma \cdot \Delta x}{x + \gamma \cdot \Delta x}}{\Delta x} = \frac{y \cdot \gamma}{x + \gamma \cdot \Delta x}$
 \end{itemize}
+
 So,
-$S = \left| \frac{y / (x + \Delta x)}{y / x} - 1 \right| \times 100\% = \left| \frac{x}{x + \Delta x} - 1 \right| \times 100\% = \left| \frac{-\Delta x}{x + \Delta x} \right| \times 100\% = \frac{\Delta x}{x + \Delta x} \times 100\%$
+$S = \left( \frac{y \cdot \gamma / (x + \gamma \cdot \Delta x)}{y / x} - 1 \right) \times 100\% = \left( \frac{\gamma \cdot x}{x + \gamma \cdot \Delta x} - 1 \right) \times 100\%$
 
-Now substitute the trade lot fraction $f = \frac{\Delta x}{x}$, which means $\Delta x = f \times x$.\\
-$S(f) = \frac{f \times x}{x + f \times x} \times 100\% = \frac{f \times x}{x(1 + f)} \times 100\% = \frac{f}{1 + f} \times 100\%$
+$S = \left( \frac{\gamma \cdot x - x - \gamma \cdot \Delta x}{x + \gamma \cdot \Delta x} \right) \times 100\% = \left( \frac{(\gamma - 1) \cdot x - \gamma \cdot \Delta x}{x + \gamma \cdot \Delta x} \right) \times 100\%$
 
-Plot of $S(f) = \frac{f}{1 + f} \times 100\% $:
-% \begin{itemize}
-%     \item The trade lot fraction $f$ ranges from 0 (no trade) to potentially very large numbers (though practically limited).
-%     \item When $f = 0$, $S(0) = 0$. Zero trade means zero slippage.
-%     \item As $f$ increases from 0, the denominator $(1+f)$ increases slightly slower than the numerator $f$. The slippage $S(f)$ increases.
-%     \item As $f \to \infty$ (meaning the trade size $\Delta x$ becomes infinitely large compared to the reserve $x$), the slippage $S(f) = \frac{f}{1+f}$ approaches 1 (or 100\%). This makes sense, as an infinitely large trade would drain almost all of the other token, resulting in an execution price vastly different from the initial spot price.
-%     \item The relationship is non-linear. The slope is steepest near $f=0$ and flattens out as $f$ increases. This means slippage increases rapidly for small trade fractions but the rate of increase slows down for very large trade fractions (though it always increases).
-% \end{itemize}
+Now substitute the trade lot fraction $f = \frac{\Delta x}{x}$, which means $\Delta x = f \times x$:
+
+$S(f) = \left( \frac{(\gamma - 1) \cdot x - \gamma \cdot f \cdot x}{x + \gamma \cdot f \cdot x} \right) \times 100\% = \left( \frac{(\gamma - 1) - \gamma \cdot f}{1 + \gamma \cdot f} \right) \times 100\%$
+
+With $\gamma = 0.997$:
+
+$S(f) = \left( \frac{(0.997 - 1) - 0.997 \cdot f}{1 + 0.997 \cdot f} \right) \times 100\% = \left( \frac{-0.003 - 0.997 \cdot f}{1 + 0.997 \cdot f} \right) \times 100\%$
+
+Plot of $S(f) = \frac{-0.003 - 0.997 \cdot f}{1 + 0.997 \cdot f} \times 100\% $:
 \begin{figure}[H]
     \centering
     \begin{tikzpicture}
         \begin{axis}[
-            xlabel={Trade Lot Fraction ($f$)},
-            ylabel={Slippage (\%)},
-            xmin=0, xmax=20,
-            ymin=0, ymax=100,
-            grid=major,
-            width=0.9\textwidth,
-            height=0.5\textwidth,
-            legend pos=north west,
-            title={Slippage vs. Trade Lot Fraction}
-        ]
-        \addplot[
-            domain=0:20,
-            samples=200,
-            thick,
-            blue
-        ]
-        {100 * x / (1 + x)};
+                xlabel={Trade Lot Fraction ($f$)},
+                ylabel={Slippage (\%)},
+                xmin=0, xmax=20,
+                ymin=-100, ymax=0,
+                grid=major,
+                width=0.9\textwidth,
+                height=0.5\textwidth,
+                legend pos=north west,
+                title={Slippage vs. Trade Lot Fraction (with 0.3\% fee)}
+            ]
+            \addplot[
+                domain=0:20,
+                samples=200,
+                thick,
+                blue
+            ]
+            {100 * (-0.003 - 0.997*x) / (1 + 0.997*x)};
         \end{axis}
     \end{tikzpicture}
     \caption{Plot of Slippage (\%) vs. Trade Lot Fraction ($f = \Delta x / x$)}
     \label{fig:slippage_fraction}
 \end{figure}
+
 \end{document}
