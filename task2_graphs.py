@@ -4,27 +4,24 @@ import numpy as np
 from decimal import Decimal
 import os
 
-# --- 1. Load Data From File ---
 print("Loading data from simulation file...")
 
-# Path to the simulation data
 simulation_data_path = "simulation_data.json"
 
 try:
     with open(simulation_data_path, 'r') as f:
         simulation_data = json.load(f)
     
-    # Extract data from the loaded JSON based on the new structure
     timestamps = simulation_data['timestamps']
     tvl_a_raw = simulation_data['totalValuesLockedA']
     tvl_b_raw = simulation_data['totalValuesLockedB']
-    spot_prices_b_raw = simulation_data['spotPricesB']  # Now using spotPricesB for reserve ratio
+    spot_prices_b_raw = simulation_data['spotPricesB']  
     swap_vol_a_raw = simulation_data['cumulativeSwapVolumeA']
     swap_vol_b_raw = simulation_data['cumulativeSwapVolumeB']
     slippages_raw = simulation_data['slippages']
     feeDataA_raw = simulation_data['cumulativeFeesA']
     feeDataB_raw = simulation_data['cumulativeFeesB']
-    lpDistributionData_raw = simulation_data['lpDistributionSnapshots']  # Now only for 5 LPs
+    lpDistributionData_raw = simulation_data['lpDistributionSnapshots']
     
     print("Data loaded successfully from file.")
     
@@ -39,10 +36,8 @@ except KeyError as e:
     print(f"Error: Simulation data file is missing expected data field: {e}")
     exit(1)
 
-# --- 2. Process Data ---
 print("Processing data...")
 
-# Set the decimal precision (assuming 18 for typical ERC20 tokens)
 DECIMALS = 18
 WEI = Decimal(10**DECIMALS)
 
@@ -61,41 +56,34 @@ def scaled_to_decimal(scaled_str):
 def slippage_to_decimal(slippage_str):
     """Converts slippage (Percent * 1e18 string or null) to Decimal percent without abs()."""
     if slippage_str is None or slippage_str == 'null': return None
-    try: return Decimal(slippage_str) / WEI  # No abs() here to keep sign
+    try: return Decimal(slippage_str) / WEI 
     except Exception: return None
 
-# Convert data to numerical types (Decimal) for plotting
 n_points = len(timestamps)
-time_axis = np.arange(n_points)  # Use transaction index as time axis
+time_axis = np.arange(n_points) 
 
 reserves_a = [wei_to_decimal(r) for r in tvl_a_raw]
 reserves_b = [wei_to_decimal(r) for r in tvl_b_raw]
 volume_a = [wei_to_decimal(v) for v in swap_vol_a_raw]
 volume_b = [wei_to_decimal(v) for v in swap_vol_b_raw]
 
-# Calculate TVL using formula: 2 * totalValuesLockedA
 total_value_locked = [2 * r for r in reserves_a]
 
-# Spot prices B per A instead of reserve ratio
 prices_b = [scaled_to_decimal(p) for p in spot_prices_b_raw]
 
-# Process slippage without taking absolute value
 slippages_percent = [slippage_to_decimal(s) for s in slippages_raw]
 slippage_time_axis = [i for i, s in enumerate(slippages_percent) if s is not None]
 slippage_values = [s for s in slippages_percent if s is not None]
 
-# Process fee data
 fees_a = [wei_to_decimal(f) for f in feeDataA_raw]
 fees_b = [wei_to_decimal(f) for f in feeDataB_raw]
 
-# Process LP Distribution Data for only 5 LPs
 try:
     lp_distribution = np.array([[wei_to_decimal(bal) for bal in snapshot] 
                                 for snapshot in lpDistributionData_raw], dtype=Decimal)
     
-    # Check if LP distribution data is available
     if len(lpDistributionData_raw) > 0:
-        num_lps = lp_distribution.shape[1]  # Should be 5 LPs
+        num_lps = lp_distribution.shape[1]
         print(f"Processed LP distribution data for {num_lps} LPs across {len(lp_distribution)} snapshots.")
     else:
         num_lps = 0
@@ -108,12 +96,10 @@ except Exception as e:
 
 print("Data processed successfully.")
 
-# --- 3. Generate Plots ---
 print("Generating plots...")
 plt.style.use('seaborn-v0_8-darkgrid')
 plt.figure(figsize=(15, 18))
 
-# Plot 1: Total Value Locked (2 * totalValuesLockedA)
 plt.subplot(3, 2, 1)
 plt.plot(time_axis, total_value_locked, label='Total Value Locked (2 × Token A)', color='blue')
 plt.xlabel('Transaction Index')
@@ -122,7 +108,6 @@ plt.title('Total Value Locked Over Time')
 plt.legend()
 plt.grid(True)
 
-# Plot 2: Spot Price B (A per B) - using spotPricesB
 plt.subplot(3, 2, 2)
 plt.plot(time_axis, prices_b, label='Spot Price (A per B)', color='green')
 plt.xlabel('Transaction Index')
@@ -131,7 +116,6 @@ plt.title('Spot Price (Token A in terms of B)')
 plt.legend()
 plt.grid(True)
 
-# Plot 3: Cumulative Swap Volume
 plt.subplot(3, 2, 3)
 plt.plot(time_axis, volume_a, label='Cumulative Vol A Swapped IN', color='purple')
 plt.plot(time_axis, volume_b, label='Cumulative Vol B Swapped IN', color='brown')
@@ -141,24 +125,20 @@ plt.title('Cumulative Swap Volume (Tokens Swapped IN)')
 plt.legend()
 plt.grid(True)
 
-# Plot 4: Slippage on Swaps (without absolute value)
 plt.subplot(3, 2, 4)
 if slippage_time_axis:
-    # Convert Decimal slippage values to float for plotting markers
     plt.plot(slippage_time_axis, [float(s) for s in slippage_values], label='Slippage %',
-             marker='o', markersize=4, linestyle='None', color='magenta')
+             marker='o', markersize=4, linestyle='-', color='magenta')  
     plt.xlabel('Transaction Index of Swap')
     plt.ylabel('Slippage (%)')
     plt.title('Slippage per Swap Transaction')
     plt.legend()
     plt.grid(True)
-    # Add a horizontal line at y=0 to show positive/negative boundary
     plt.axhline(y=0, color='black', linestyle='--', alpha=0.3)
 else:
     plt.text(0.5, 0.5, 'No valid slippage data recorded', horizontalalignment='center', verticalalignment='center')
     plt.title('Slippage per Swap Transaction')
 
-# Plot 5: Fee Accumulation
 plt.subplot(3, 2, 5)
 plt.plot(time_axis, fees_a, label='Cumulative Fees (Token A)', color='darkblue')
 plt.plot(time_axis, fees_b, label='Cumulative Fees (Token B)', color='orange')
@@ -168,16 +148,11 @@ plt.title('Cumulative Fee Accumulation')
 plt.legend()
 plt.grid(True)
 
-# Plot 6: LP Token Distribution (Line plot instead of stackplot for 5 LPs)
 plt.subplot(3, 2, 6)
 if num_lps > 0 and lp_distribution.shape[0] == n_points:
-    # Prepare data for line plot
-    lp_data = lp_distribution.astype(float)  # Convert from Decimal to float for plotting
-    
-    # Generate labels for LPs
+    lp_data = lp_distribution.astype(float) 
     lp_labels = [f'LP {i+1}' for i in range(num_lps)]
     
-    # Plot line for each LP
     for i in range(num_lps):
         plt.plot(time_axis, lp_data[:, i], label=lp_labels[i])
     
@@ -193,17 +168,14 @@ else:
     plt.xticks([])
     plt.yticks([])
 
-# Adjust layout
 plt.tight_layout(pad=3.0)
 plt.suptitle('DEX Simulation Results', fontsize=16, y=1.02)
 
-# Create directory if not exists and save the plot
 plot_dir = "task2_plots"
 if not os.path.exists(plot_dir):
     print(f"Creating directory {plot_dir}...")
     os.makedirs(plot_dir)
 
-# Save the combined plot
 plot_filename = os.path.join(plot_dir, "dex_simulation_combined.png")
 try:
     plt.savefig(plot_filename, dpi=300, bbox_inches='tight')
@@ -211,24 +183,22 @@ try:
 except Exception as e:
     print(f"Error saving combined plot: {e}")
 
-# --- 4. Save Individual Plots ---
 
 def save_individual_plot(plot_func, title_short):
     """Helper to create and save individual plots."""
     print(f"Saving individual plot: {title_short}...")
-    plt.figure(figsize=(10, 6)) # New figure for individual plot
-    plot_func() # Call the specific plotting logic
+    plt.figure(figsize=(10, 6)) 
+    plot_func()
     filename = os.path.join(plot_dir, f"{title_short}.png")
     try:
         plt.tight_layout()
         plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close() # Close the figure to free memory
+        plt.close() 
         print(f"Saved {title_short} plot to {filename}")
     except Exception as e:
         print(f"Error saving plot {title_short}: {e}")
-        plt.close() # Close figure even if saving failed
+        plt.close()
 
-# Define plotting functions for individual saving
 def plot_tvl():
     plt.plot(time_axis, total_value_locked, label='Total Value Locked (2 × Token A)', color='blue')
     plt.xlabel('Transaction Index'); plt.ylabel('Value'); plt.title('Total Value Locked Over Time'); plt.legend(); plt.grid(True)
@@ -244,12 +214,13 @@ def plot_volume():
 
 def plot_slippage():
     if slippage_time_axis:
-        plt.plot(slippage_time_axis, [float(s) for s in slippage_values], label='Slippage %', marker='o', markersize=4, linestyle='None', color='magenta')
-        plt.axhline(y=0, color='black', linestyle='--', alpha=0.3)  # Zero line
+        plt.plot(slippage_time_axis, [float(s) for s in slippage_values], label='Slippage %', 
+                 marker='o', markersize=4, linestyle='-', color='magenta') 
+        plt.axhline(y=0, color='black', linestyle='--', alpha=0.3)
         plt.xlabel('Transaction Index of Swap'); plt.ylabel('Slippage (%)'); plt.title('Slippage per Swap'); plt.legend(); plt.grid(True)
     else:
         plt.text(0.5, 0.5, 'No valid slippage data', ha='center', va='center'); plt.title('Slippage per Swap')
-
+        
 def plot_fees():
     plt.plot(time_axis, fees_a, label='Cumulative Fees (Token A)', color='darkblue')
     plt.plot(time_axis, fees_b, label='Cumulative Fees (Token B)', color='orange')
@@ -267,15 +238,12 @@ def plot_lp_distribution():
     else:
         plt.text(0.5, 0.5, 'LP Distribution data not available', ha='center', va='center'); plt.title('LP Token Distribution')
 
-# Save individual plots by calling the helper
 save_individual_plot(plot_tvl, "total_value_locked")
 save_individual_plot(plot_spot_price, "spot_price_a_per_b")
 save_individual_plot(plot_volume, "swap_volume")
 save_individual_plot(plot_slippage, "slippage")
 save_individual_plot(plot_fees, "fee_accumulation")
 save_individual_plot(plot_lp_distribution, "lp_distribution")
-
-# Close the main combined plot figure if it's still open
 plt.close(plt.gcf())
 
 print("Plotting script finished. All plots saved to the task2_plots directory.")

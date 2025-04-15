@@ -45,8 +45,8 @@ async function simulateDEX() {
         // --- Distributing Initial Tokens ---
         console.log("Distributing initial Token A and Token B to users...");
         const usersToFund = users;
-        const initialDistA = web3.utils.toWei('100', 'ether');
-        const initialDistB = web3.utils.toWei('200', 'ether');
+        const initialDistA = web3.utils.toWei('200', 'ether');
+        const initialDistB = web3.utils.toWei('100', 'ether');
         for (const user of usersToFund) {
             try {
                 console.log(`Distributing to user ${user.substring(0, 8)}...`);
@@ -92,8 +92,8 @@ async function simulateDEX() {
         // 2. Initial Liquidity
         console.log("Adding initial liquidity...");
         try {
-            const initialAmountA = web3.utils.toWei('100', 'ether');
-            const initialAmountB = web3.utils.toWei('200', 'ether');
+            const initialAmountA = web3.utils.toWei('200', 'ether');
+            const initialAmountB = web3.utils.toWei('100', 'ether');
             // Ensure users[0] has enough tokens (distribution step should handle this)
             const balA_init = await tokenA.methods.balanceOf(users[0]).call();
             const balB_init = await tokenB.methods.balanceOf(users[0]).call();

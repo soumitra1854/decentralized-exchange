@@ -35,8 +35,7 @@ contract Arbitrage is Ownable {
     IDEX public immutable dex1;
     IDEX public immutable dex2;
 
-    uint256 public minProfitThreshold = 1; // Example: 1 Wei
-
+    uint256 public minProfitThreshold = 1; 
     event ArbitrageExecuted(
         address startToken,
         uint256 startAmount,
